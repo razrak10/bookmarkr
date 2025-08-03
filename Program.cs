@@ -1,4 +1,6 @@
-﻿using Microsoft.VisualBasic;
+﻿using System.CommandLine;
+using System.CommandLine.Builder;
+using System.CommandLine.Parsing;
 
 namespace bookmarkr;
 
@@ -6,41 +8,17 @@ class Program
 {
     static void Main(string[] args)
     {
-        var rootCommand = new RootCommand()
-        if (args == null && args.Length == 0)
-        {
-            Helper.ShowErrorMessage(["You have not passed any argument. Expected syntax is :", "bookmarkr <command-name> <parameters>"]);
-            return;
-        }
+        RootCommand rootCommand = new RootCommand("Bookmarkr is a bookmark manager provided as a CLI application");
 
-        var service = new BookMarkService();
+        rootCommand.Set;
 
-        switch (args[0].ToLower())
-        {
-            case "link":
-                ManageLinks(args, service);
-                break;
-            default:
-                Helper.ShowErrorMessage(["Unkown Command"]);
-                break;
-        }
+        var parser = new CommandLineBuilder(rootCommand)
+            .UseDefaults()
+            .Build();
     }
 
-    private static void ManageLinks(string[] args, BookMarkService service)
+    private static void OnHandleRootCommand()
     {
-        if (args.Length < 2)
-        {
-            Helper.ShowErrorMessage(["Unsufficient number of parameters. The expected syntax is:", "bookmarkr link <subcommand> <parameters>"]);
-        }
-
-        switch (args[1].ToLower())
-        {
-            case "add":
-                service.AddLink(args[2], args[3]);
-                break;
-            default:
-                Helper.ShowErrorMessage(["Unsufficient number of parameters. The expected syntax is:", "bookmarks link <subcommand> <parameter>"]);
-                break;  
-        }
+        Console.WriteLine("Hello from the root command!");
     }
 }
