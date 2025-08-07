@@ -1,10 +1,11 @@
 using System;
+using bookmarkr.Models;
 
 namespace bookmarkr;
 
 public class BookMarkService
 {
-    private readonly List<Bookmark> _bookmarks = new List<Bookmark>
+    private readonly List<Bookmark> _existingBookmarks = new List<Bookmark>
     {
         new Bookmark {
             Name = "First",
@@ -18,7 +19,7 @@ public class BookMarkService
         },
     };
 
-    public List<Bookmark> Bookmarks => _bookmarks;
+    public List<Bookmark> ExistingBookmarks => _existingBookmarks;
 
     public void AddLink(string name, string url, string category)
     {
@@ -33,14 +34,14 @@ public class BookMarkService
             // Helper.ShowErrorMessage(["the `url` for the link is not provided. The expected sytnax is:", "bookmarkr link add <name> <url>"]);
             return;
         }
-        if (Bookmarks.Any(b => b.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        if (ExistingBookmarks.Any(b => b.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
         {
             // Helper.ShowErrorMessage(["A link with the name `{name}` already exists. It will thus not be added",
             // $"To update the existing link, use the command: bookmarkr link update `{name}` `{url}`"]);
             return;
         }
 
-        Bookmarks.Add(new Bookmark
+        ExistingBookmarks.Add(new Bookmark
         {
             Name = name,
             Url = url,
@@ -51,12 +52,60 @@ public class BookMarkService
 
     public IReadOnlyCollection<Bookmark> GetAll()
     {
-        return this.Bookmarks;
+        return this.ExistingBookmarks;
     }
 
-    public void ImportBookmarks(IEnumerable<Bookmark> bookmarks)
+    public void ImportBookmarks(IEnumerable<Bookmark> bookmarks, bool merge)
     {
-        if (bookmarks is not null && bookmarks.Any())
-            Bookmarks.AddRange(bookmarks);
+        if (!bookmarks.Any() || bookmarks is null)
+        {
+            return;
+        }
+
+        if (!merge)
+        {
+            ExistingBookmarks.AddRange(bookmarks);
+        }
+        if (merge)
+        {
+            foreach (Bookmark bookmark in bookmarks)
+            {
+                var existingbookmark =
+ExistingBookmarks.Find(e => string.Equals(e.Url, bookmark.Url, StringComparison.OrdinalIgnoreCase));
+
+                if (existingbookmark is not null)
+                {
+                    existingbookmark.Name = bookmark.Name;
+                }
+                else
+                {
+                    ExistingBookmarks.Add(bookmark);
+                }
+            }
+        }
+    }
+
+    public BookMarkConflictModel? Import(Bookmark bookmark, bool merge)
+    {
+        Bookmark? conflict = ExistingBookmarks.FirstOrDefault(b =>
+            b.Url == bookmark.Url && b.Name != bookmark.Name);
+
+        if (conflict is not null && merge)
+        {
+            var conflictModel = new BookMarkConflictModel
+            {
+                OriginalName = conflict.Name,
+                UpdatedName = bookmark.Name,
+                Url = bookmark.Url
+            };
+            conflict.Name = bookmark.Name;
+
+            return conflictModel;
+        }
+        else
+        {
+            ExistingBookmarks.Add(bookmark);
+            return null;
+        }
     }
 }
