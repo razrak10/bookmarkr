@@ -13,7 +13,7 @@ public class LinkRemoveCommandHandler : AsynchronousCommandLineAction
         _bookmarkService = bookMarkService;
     }
 
-    public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public override Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         var name = parseResult.GetValue<string>("name");
 
@@ -22,7 +22,7 @@ public class LinkRemoveCommandHandler : AsynchronousCommandLineAction
             OnHandleRemoveCommand(_bookmarkService, name);
         }
 
-        return -1;
+        return Task.FromResult(-1);
     }
 
     private static void OnHandleRemoveCommand(BookMarkService bookMarkService, string name)
@@ -32,7 +32,7 @@ public class LinkRemoveCommandHandler : AsynchronousCommandLineAction
         var bookmarks = bookMarkService.ExistingBookmarks;
         if (bookmarks is null || !bookmarks.Any())
         {
-            CommandHelper.PrintConsoleMessage("Warning: no bookmarks currently present.", ConsoleColor.Yellow);
+            CommandHelper.ShowWarningMessage(["Warning: no bookmarks currently present."]);
 
             return;
         }
@@ -41,14 +41,14 @@ public class LinkRemoveCommandHandler : AsynchronousCommandLineAction
 
         if (foundBookmark is null)
         {
-            CommandHelper.PrintConsoleMessage("Warning: bookmark does not exist.", ConsoleColor.Yellow);
+            CommandHelper.ShowWarningMessage(["Bookmark does not exist."]);
 
             return;
         }
 
         bookmarks.Remove(foundBookmark);
 
-        CommandHelper.PrintConsoleMessage("Bookmark removed successfully.", ConsoleColor.Green);
+        CommandHelper.ShowSuccessMessage(["Bookmark removed successfully."]);
         CommandHelper.ListAll(bookMarkService);
     }
 }

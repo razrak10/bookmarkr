@@ -13,7 +13,7 @@ public class LinkUpdateCommandHandler : AsynchronousCommandLineAction
         _bookmarkService = bookMarkService;
     }
 
-    public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public override Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         var name = parseResult.GetValue<string>("name");
         var url = parseResult.GetValue<string>("url");
@@ -25,7 +25,7 @@ public class LinkUpdateCommandHandler : AsynchronousCommandLineAction
             OnHandleUpdateCommand(_bookmarkService, name, url);
         }
 
-        return 0;
+        return Task.FromResult(0);
     }
 
     private static void OnHandleUpdateCommand(BookMarkService bookMarkService, string name, string url)
@@ -33,7 +33,7 @@ public class LinkUpdateCommandHandler : AsynchronousCommandLineAction
         var bookmarks = bookMarkService.ExistingBookmarks;
         if (bookmarks is null || !bookmarks.Any())
         {
-            CommandHelper.PrintConsoleMessage("Warning: no bookmarks currently present.", ConsoleColor.Yellow);
+            CommandHelper.ShowWarningMessage(["No bookmarks currently present."]);
 
             return;
         }
@@ -42,15 +42,14 @@ public class LinkUpdateCommandHandler : AsynchronousCommandLineAction
 
         if (foundBookmark is null)
         {
-            CommandHelper.PrintConsoleMessage("Warning: bookmark does not exist. Use the `link add` command to add a new bookmark.",
-            ConsoleColor.Yellow);
+            CommandHelper.ShowWarningMessage(["Bookmark does not exist. Use the `link add` command to add a new bookmark."]);
 
             return;
         }
 
         foundBookmark.Url = url;
 
-        CommandHelper.PrintConsoleMessage("Bookmark updated successfully.", ConsoleColor.Green);
+        CommandHelper.ShowSuccessMessage(["Bookmark updated successfully."]);
         CommandHelper.ListAll(bookMarkService);
     }
 }

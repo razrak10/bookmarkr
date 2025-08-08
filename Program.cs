@@ -6,26 +6,16 @@ using Serilog;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using bookmarkr.Commands;
-using System.Runtime.InteropServices;
+using Spectre.Console;
 
 namespace bookmarkr;
 
 class Program
 {
-    public static void CreateLogger()
-    {
-        var configuration = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json")
-            .Build();
-
-        Log.Logger = new LoggerConfiguration()
-            .ReadFrom.Configuration(configuration)
-            .CreateLogger();
-    }
-
     static void Main(string[] args)
     {
+        FreeSerilogLoggerOnShutdown();
+
         CreateLogger();
 
         RootCommand rootCommand = new RootCommand("Bookmarkr is a bookmark manager provided as a CLI application");
@@ -37,10 +27,14 @@ class Program
             {
                 services.AddSingleton<BookMarkService>();
             });
-            builder.Build();
         });
 
         rootCommand.UseCommandHandler<RootCommandHandler>();
+
+        // Interactive Command
+        Command interactiveCommand = new Command("interactive", "Manage bookmarks interactively");
+        interactiveCommand.UseCommandHandler<InteractiveCommandHandler>();
+        rootCommand.Subcommands.Add(interactiveCommand);
 
         // List bookmarks
         var listOption = new Option<bool>("list", ["--list", "-l"]);
@@ -173,6 +167,35 @@ class Program
     }
 
     //"https://learn.microsoft.com/en-us/dotnet/core/extensions/configuration-providers#json-configuration-provider",
+
+    private static void CreateLogger()
+    {
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json")
+            .Build();
+
+        Log.Logger = new LoggerConfiguration()
+            .ReadFrom.Configuration(configuration)
+            .CreateLogger();
+    }
+
+    private static void FreeSerilogLoggerOnShutdown()
+    {
+        // This even is raised when the process is about to exit
+        // allowing you to perform cleanup tasks or save data
+        AppDomain.CurrentDomain.ProcessExit += (s, e) => ExecuteShutdownTasks();
+        // This even is triggered when the user pressed Ctrl+C or
+        // Ctrl+Break. Doesn't cover all scenarios but useful for
+        // user initiated terminations
+        Console.CancelKeyPress += (s, e) => ExecuteShutdownTasks();
+    }
+
+    private static void ExecuteShutdownTasks()
+    {
+        Console.WriteLine("Performing shutdown tasks...");
+        Log.CloseAndFlush();
+    }
 
     private static void OnHandleRootCommand()
     {

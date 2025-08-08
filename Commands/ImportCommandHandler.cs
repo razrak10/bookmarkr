@@ -16,9 +16,8 @@ public class ImportCommandHandler : AsynchronousCommandLineAction
         _bookmarkService = bookmarkService;
     }
 
-    public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public override Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
-
         FileInfo? inputFile = parseResult.GetValue<FileInfo>("file");
         bool merge = parseResult.GetValue<bool>("merge");
 
@@ -27,23 +26,39 @@ public class ImportCommandHandler : AsynchronousCommandLineAction
             OnImportCommand(inputFile, merge);
         }
 
-        return -1;
+        return Task.FromResult(-1);
     }
 
     private void OnImportCommand(FileInfo inputFile, bool merge = false)
     {
         List<Bookmark> bookmarks = new List<Bookmark>();
         string json;
+
         try
         {
             json = File.ReadAllText(inputFile.FullName);
-
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            LogManager.LogError($"Insufficient permission to access the file {inputFile.FullName}", ex);
+            return;
+        }
+        catch (DirectoryNotFoundException ex)
+        {
+            LogManager.LogError($"The file {inputFile.FullName} cannot be found due to an invalid path", ex);
+            return;
+        }
+        catch (PathTooLongException ex)
+        {
+            LogManager.LogError($"Provided path exceeds max length.", ex);
+            return;
         }
         catch (Exception ex)
         {
-            CommandHelper.PrintConsoleMessage($"Error accessing file: {ex.Message}", ConsoleColor.Red);
+            LogManager.LogError("Error accessing file.", ex);
             return;
         }
+
         try
         {
             if (!string.IsNullOrWhiteSpace(json))
@@ -51,9 +66,9 @@ public class ImportCommandHandler : AsynchronousCommandLineAction
                 bookmarks = JsonSerializer.Deserialize<List<Bookmark>>(json) ?? new List<Bookmark>();
             }
         }
-        catch (JsonException ex)
+        catch (Exception ex)
         {
-            CommandHelper.PrintConsoleMessage($"Error occured while attempting to deserialize the imports file, exception:{ex.Message}", ConsoleColor.Red);
+            LogManager.LogError($"Error occured while attempting to deserialize the imports file", ex);
             return;
         }
 
@@ -65,5 +80,6 @@ public class ImportCommandHandler : AsynchronousCommandLineAction
                 Log.Information($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | Bookmark updated | name changed from '{conflictBookmark.OriginalName}' to '{conflictBookmark.UpdatedName}' for URL '{conflictBookmark.Url}'");
             }
         }
+        CommandHelper.ShowSuccessMessage(["Bookmarks imported successfully!"]);
     }
 }

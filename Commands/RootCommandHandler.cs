@@ -10,8 +10,8 @@ public class RootCommandHandler : AsynchronousCommandLineAction
     {
 
     }
-    public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public override Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
-        return 0;
+        return Task.FromResult(0);
     }
 }

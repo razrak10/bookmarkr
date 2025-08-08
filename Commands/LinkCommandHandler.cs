@@ -13,10 +13,10 @@ public class LinkCommandHandler : AsynchronousCommandLineAction
         _bookmarkService = service;
     }
 
-    public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public override Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         OnHandleLinkCommand(_bookmarkService);
-        return 0;
+        return Task.FromResult(0);
     }
 
     private static void OnHandleLinkCommand(BookMarkService bookMarkService)

@@ -13,7 +13,7 @@ public class LinkAddCommandHandler : AsynchronousCommandLineAction
         _bookmarkService = service;
     }
 
-    public async override Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public override Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         var names = parseResult.GetValue<string[]>("name");
         var urls = parseResult.GetValue<string[]>("url");
@@ -21,12 +21,12 @@ public class LinkAddCommandHandler : AsynchronousCommandLineAction
 
         if (names is null || urls is null || categories is null)
         {
-            CommandHelper.PrintConsoleMessage("Provided bookmark name, urls or categories is null", ConsoleColor.Red);
-            return -1;
+            CommandHelper.ShowErrorMessage(["Provided bookmark name, urls or categories is null"]);
+            return Task.FromResult(-1);
         }
 
         OnHandleAddLinkCommand(_bookmarkService, names, urls, categories);
-        return 0;
+        return Task.FromResult(0);
     }
 
     private static void OnHandleAddLinkCommand(
@@ -35,7 +35,7 @@ public class LinkAddCommandHandler : AsynchronousCommandLineAction
         for (int i = 0; i < names.Length; i++)
         {
             bookmarkService.AddLink(names[i], urls[i], categories[i]);
-            CommandHelper.PrintConsoleMessage("Bookmark updated successfully.", ConsoleColor.Green);
+            CommandHelper.ShowErrorMessage(["Bookmark updated successfully."]);
         }
 
         CommandHelper.ListAll(bookmarkService);

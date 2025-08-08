@@ -30,7 +30,7 @@ public class ExportCommandHandler : AsynchronousCommandLineAction
     {
         try
         {
-            CommandHelper.PrintConsoleMessage("Starting export operation...");
+            Console.WriteLine("Starting export operation...");
             var bookmarks = bookMarkService.GetAll();
             string json = JsonSerializer.Serialize(bookmarks,
             new JsonSerializerOptions { WriteIndented = true });
@@ -41,33 +41,27 @@ public class ExportCommandHandler : AsynchronousCommandLineAction
             string requested = ex.CancellationToken.IsCancellationRequested
             ? "Cancellation was requestd by user"
             : "Cancellation was not requested by user";
-            CommandHelper.PrintConsoleMessage($"Operation was cancelled.\n{requested}\nCancellation reason: {ex.Message}",
-            ConsoleColor.Yellow);
+            CommandHelper.ShowWarningMessage([$"Operation was cancelled.\n{requested}\nCancellation reason: {ex.Message}"]);
         }
         catch (JsonException ex)
         {
-            CommandHelper.PrintConsoleMessage($"Failed to serialize bookmarks to JSON.\nError message {ex.Message}",
-            ConsoleColor.Red);
+            CommandHelper.ShowErrorMessage([$"Failed to serialize bookmarks to JSON.\nError message {ex.Message}"]);
         }
         catch (UnauthorizedAccessException ex)
         {
-            CommandHelper.PrintConsoleMessage($"Insufficient permission to access the file {outputFile.FullName}\nError message {ex.Message}",
-            ConsoleColor.Red);
+            CommandHelper.ShowErrorMessage([$"Insufficient permission to access the file {outputFile.FullName}\nError message {ex.Message}"]);
         }
         catch (DirectoryNotFoundException ex)
         {
-            CommandHelper.PrintConsoleMessage($"The file {outputFile.FullName} cannot be found due to an invalid path\nError message {ex.Message}",
-            ConsoleColor.Red);
+            CommandHelper.ShowErrorMessage([$"The file {outputFile.FullName} cannot be found due to an invalid path\nError message {ex.Message}"]);
         }
         catch (PathTooLongException ex)
         {
-            CommandHelper.PrintConsoleMessage($"Provided path exceeds max length.\nError message {ex.Message}",
-            ConsoleColor.Red);
+            CommandHelper.ShowErrorMessage([$"Provided path exceeds max length.\nError message {ex.Message}"]);
         }
         catch (Exception ex)
         {
-            CommandHelper.PrintConsoleMessage($"Unknown exception has occured\nError message {ex.Message}",
-            ConsoleColor.Red);
+            CommandHelper.ShowErrorMessage([$"Unknown exception has occured\nError message {ex.Message}"]);
         }
     }
 }
