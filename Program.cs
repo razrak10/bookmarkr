@@ -163,6 +163,14 @@ class Program
         importCommand.UseCommandHandler<ImportCommandHandler>();
         rootCommand.Add(importCommand);
 
+        // Show bookmark
+        Command showCommand = new Command("show", "Shows bookmark in a formatted table.")
+        {
+            nameOption
+        };
+        showCommand.UseCommandHandler<ShowCommandHandler>();
+        linkCommand.Subcommands.Add(showCommand);
+
         commandLineConfig.Parse(args).InvokeAsync();
     }
 
