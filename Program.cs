@@ -171,6 +171,24 @@ class Program
         showCommand.UseCommandHandler<ShowCommandHandler>();
         linkCommand.Subcommands.Add(showCommand);
 
+        // Change bookmark category
+        Command categoryCommand = new Command("category", "");
+        categoryCommand.UseCommandHandler<CategoryCommandHandler>();
+
+        Option forUrlOption = new Option<string>("forUrl", ["--for-url", "-fu"])
+        {
+            Required = true,
+            Arity = ArgumentArity.ExactlyOne
+        };
+        Command changeCommand = new Command("change", "Change bookmark category.")
+        {
+            forUrlOption
+        };
+        changeCommand.UseCommandHandler<ChangeCommandHandler>();
+
+        rootCommand.Add(categoryCommand);
+        categoryCommand.Subcommands.Add(changeCommand);
+
         commandLineConfig.Parse(args).InvokeAsync();
     }
 

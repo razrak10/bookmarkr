@@ -6,6 +6,14 @@ namespace bookmarkr;
 
 public class BookMarkService
 {
+    private readonly HashSet<string> _categories = new()
+    {
+        "Cars",
+        "Tech",
+        "SocialMedia",
+        "Cooking"
+    };
+
     private readonly List<Bookmark> _existingBookmarks = new List<Bookmark>
     {
         new Bookmark {
@@ -35,25 +43,25 @@ public class BookMarkService
         },
     };
 
+    public HashSet<string> Categories => _categories;
     public List<Bookmark> ExistingBookmarks => _existingBookmarks;
 
     public void AddLink(string name, string url, string category)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
-            // Helper.ShowErrorMessage(["the `name` for the link is not provided. The expected sytnax is:", "bookmarkr link add <name> <url>"]);
+            CommandHelper.ShowErrorMessage(["the `name` for the link is not provided. The expected sytnax is:", "bookmarkr link add <name> <url>"]);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(url))
         {
-            // Helper.ShowErrorMessage(["the `url` for the link is not provided. The expected sytnax is:", "bookmarkr link add <name> <url>"]);
+            CommandHelper.ShowErrorMessage(["the `url` for the link is not provided. The expected sytnax is:", "bookmarkr link add <name> <url>"]);
             return;
         }
         if (ExistingBookmarks.Any(b => b.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
         {
-            // Helper.ShowErrorMessage(["A link with the name `{name}` already exists. It will thus not be added",
-            // $"To update the existing link, use the command: bookmarkr link update `{name}` `{url}`"]);
+            CommandHelper.ShowErrorMessage(["A link with the name `{name}` already exists. It will thus not be added", $"To update the existing link, use the command: bookmarkr link update `{name}` `{url}`"]);
             return;
         }
 
@@ -63,17 +71,35 @@ public class BookMarkService
             Url = url,
             Category = category
         });
-        // Helper.ShowSuccessMessage(["Bookmark successfully added!"]);
+        CommandHelper.ShowSuccessMessage(["Bookmark successfully added!"]);
     }
 
     public IReadOnlyCollection<Bookmark> GetAll()
     {
-        return this.ExistingBookmarks;
+        return ExistingBookmarks;
+    }
+
+    public IEnumerable<string> GetCategories()
+    {
+        return Categories;
+    }
+
+    public bool ChangeBookmarkCategory(string url, string category)
+    {
+        Bookmark bookmark = ExistingBookmarks.FirstOrDefault(b => string.Equals(b.Url, url, StringComparison.OrdinalIgnoreCase));
+
+        if (bookmark is not null)
+        {
+            bookmark.Category = category;
+            return true;
+        }
+
+        return false;
     }
 
     public Bookmark GetBookmark(string bookmarkName)
     {
-        return ExistingBookmarks.FirstOrDefault(b => string.Equals(b.Name, bookmarkName, StringComparison.Ordinal));
+        return ExistingBookmarks.FirstOrDefault(b => string.Equals(b.Name, bookmarkName, StringComparison.OrdinalIgnoreCase));
     }
 
     public void ImportBookmarks(IEnumerable<Bookmark> bookmarks, bool merge)
