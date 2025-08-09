@@ -7,6 +7,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using bookmarkr.Commands;
 using Spectre.Console;
+using bookmarkr.Commands.Export;
+using bookmarkr.Service;
+using System.Windows.Input;
 
 namespace bookmarkr;
 
@@ -25,7 +28,7 @@ class Program
         {
             builder.ConfigureServices((context, services) =>
             {
-                services.AddSingleton<BookMarkService>();
+                services.AddSingleton<IBookMarkService, BookMarkService>();
             });
         });
 
@@ -127,17 +130,7 @@ class Program
         linkCommand.Subcommands.Add(updateLinkCommand);
 
         // Export bookmarks
-        Option<FileInfo> outputFileOption = new Option<FileInfo>("file", ["--file", "-f"])
-        {
-            Required = true,
-            Description = "The output file that will store the bookmarks",
-        };
-        outputFileOption.AcceptLegalFileNamesOnly();
-        Command exportCommand = new Command("export", "Exports all bookmarks to a file")
-        {
-            outputFileOption
-        };
-        exportCommand.UseCommandHandler<ExportCommandHandler>();
+        Command exportCommand = new ExportCommand("export", "Exports all bookmarks to a file.").Build();
         rootCommand.Add(exportCommand);
 
         // Import bookmarks
@@ -172,7 +165,7 @@ class Program
         linkCommand.Subcommands.Add(showCommand);
 
         // Change bookmark category
-        Command categoryCommand = new Command("category", "");
+        Command categoryCommand = new Command("category", "Bookmark category specific functions.");
         categoryCommand.UseCommandHandler<CategoryCommandHandler>();
 
         Option forUrlOption = new Option<string>("forUrl", ["--for-url", "-fu"])

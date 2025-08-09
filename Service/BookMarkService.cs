@@ -1,10 +1,11 @@
 using System;
 using System.Text.Json;
 using bookmarkr.Models;
+using bookmarkr.Service;
 
 namespace bookmarkr;
 
-public class BookMarkService
+public class BookMarkService : IBookMarkService
 {
     private readonly HashSet<string> _categories = new()
     {
