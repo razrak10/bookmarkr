@@ -10,6 +10,9 @@ using Spectre.Console;
 using bookmarkr.Commands.Export;
 using bookmarkr.Service;
 using System.Windows.Input;
+using bookmarkr.Options;
+using bookmarkr.Commands.Interactive;
+using bookmarkr.Commands.Category;
 
 namespace bookmarkr;
 
@@ -35,12 +38,12 @@ class Program
         rootCommand.UseCommandHandler<RootCommandHandler>();
 
         // Interactive Command
-        Command interactiveCommand = new Command("interactive", "Manage bookmarks interactively");
-        interactiveCommand.UseCommandHandler<InteractiveCommandHandler>();
+        Command interactiveCommand = new InteractiveCommand("interactive", "Manage bookmarks interactively")
+        .AssignCommandHandler();
         rootCommand.Subcommands.Add(interactiveCommand);
 
         // List bookmarks
-        var listOption = new Option<bool>("list", ["--list", "-l"]);
+        var listOption = new ListOption("list", ["--list", "-l"]);
         var linkCommand = new Command("link", "Manage bookmarks links")
         {
             listOption
@@ -49,59 +52,11 @@ class Program
         rootCommand.Subcommands.Add(linkCommand);
 
         // Add bookmarks
-        Option nameOption = new Option<string[]>("name", ["--name", "-n"])
-        {
-            Required = true,
-            Arity = ArgumentArity.OneOrMore,
-            AllowMultipleArgumentsPerToken = true
-        };
-        Option urlOption = new Option<string[]>("url", ["--url", "-u"])
-        {
-            Required = true,
-            Arity = ArgumentArity.OneOrMore,
-            AllowMultipleArgumentsPerToken = true
-        };
-        urlOption.Validators.Add(result =>
-        {
-            foreach (Token token in result.Tokens)
-            {
-                if (string.IsNullOrWhiteSpace(token.Value))
-                {
-                    result.AddError("URL cannot be empty");
-                    break;
-                }
-                else if (!Uri.TryCreate(token.Value, UriKind.Absolute, out _))
-                {
-                    result.AddError($"Invalid URL: {token.Value}");
-                    break;
-                }
-            }
-        });
-        Option categoryOption = new Option<string[]>("category", ["--category", "-c"])
-        {
-            DefaultValueFactory = (_) => ["Read later"],
-            Required = false,
-            Arity = ArgumentArity.OneOrMore,
-            AllowMultipleArgumentsPerToken = true
-        };
-        categoryOption.CompletionSources.Add(_ =>
-        {
-            return ["Read later", "Tech books", "Cooking", "Social media"];
-        });
-        categoryOption.Validators.Add(result =>
-        {
-            var categories = result.GetValueOrDefault<string[]>();
-            string[] allowedCategories = ["Read later", "Tech books", "Cooking", "Social media"];
-
-            foreach (string category in categories)
-            {
-                if (!string.IsNullOrEmpty(category) && !allowedCategories.Contains(category))
-                {
-                    result.AddError($"Category must be one of: {string.Join(", ", allowedCategories)}");
-                }
-            }
-        });
-
+        Option nameOption = new NameOption("name", ["--name", "-n"], arity: ArgumentArity.OneOrMore);
+        Option urlOption = new UrlOption("url", ["--url", "-u"], arity: ArgumentArity.OneOrMore).AddDefaultValidators();
+        Option categoryOption = new CategoryOption("category", ["--category", "-c"], arity: ArgumentArity.OneOrMore, defaultValues: ["Read later"])
+        .AddDefaultValidators(["Read later", "Tech books", "Cooking", "Social media"])
+        .AddDefaultCompletionSources(["Read later", "Tech books", "Cooking", "Social media"]);
         var addLinkCommand = new Command("add", "Add a new bookmark link")
         {
             nameOption,
@@ -111,6 +66,7 @@ class Program
         addLinkCommand.UseCommandHandler<LinkAddCommandHandler>();
         linkCommand.Subcommands.Add(addLinkCommand);
 
+        //TODO: Extract the rest of the options into their own classes
         // Remove bookmarks
         var removeOption = new Option<string>("name", ["--name", "-n"]);
         var removeLinkCommand = new Command("remove", "Removes a bookmark link")
@@ -130,30 +86,15 @@ class Program
         linkCommand.Subcommands.Add(updateLinkCommand);
 
         // Export bookmarks
-        Command exportCommand = new ExportCommand("export", "Exports all bookmarks to a file.").Build();
+        Command exportCommand = new ImportCommand("export", "Exports all bookmarks to a file.")
+        .AddOptions()
+        .AssignCommandHandler();
         rootCommand.Add(exportCommand);
 
         // Import bookmarks
-        Option<FileInfo> inputFileOption = new Option<FileInfo>("file", ["--file", "-f"])
-        {
-            Required = true,
-            Description = "The input file that contains the bookmarks to be imported",
-        };
-        inputFileOption.AcceptLegalFileNamesOnly();
-        inputFileOption.AcceptExistingOnly();
-
-        Option<bool> mergeFileOption = new Option<bool>("merge", ["--merge", "-m"])
-        {
-            Description = "Import file option to merge imported bookmarks with existing ones."
-        };
-        mergeFileOption.Arity = ArgumentArity.Zero;
-
-        Command importCommand = new Command("import", "Exports all bookmarks to a file")
-        {
-            inputFileOption,
-            mergeFileOption
-        };
-        importCommand.UseCommandHandler<ImportCommandHandler>();
+        Command importCommand = new ImportCommand("import", "Imports all bookmarks from a file.")
+        .AddOptions()
+        .AssignCommandHandler();
         rootCommand.Add(importCommand);
 
         // Show bookmark

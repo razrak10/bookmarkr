@@ -5,7 +5,7 @@ using System.Windows.Input;
 
 namespace bookmarkr.Commands.Export;
 
-public class ExportCommand : Command, ICommandBuilder
+public class ExportCommand : Command
 {
     //TODO: Create options folder and classes
     Option<FileInfo> outputFileOption = new Option<FileInfo>("file", ["--file", "-f"])
@@ -18,21 +18,17 @@ public class ExportCommand : Command, ICommandBuilder
     {
     }
 
-    public Command Build()
+    public ExportCommand AddOptions()
     {
-        this.AddOption();
-        this.AssignCommandHandler();
+        this.Add(outputFileOption);
 
         return this;
     }
 
-    public void AddOption()
-    {
-        this.Add(outputFileOption);
-    }
-
-    public void AssignCommandHandler()
+    public ExportCommand AssignCommandHandler()
     {
         this.UseCommandHandler<ExportCommandHandler>();
+
+        return this;
     }
 }
