@@ -87,7 +87,7 @@ public class BookMarkService : IBookMarkService
 
     public bool ChangeBookmarkCategory(string url, string category)
     {
-        Bookmark bookmark = ExistingBookmarks.FirstOrDefault(b => string.Equals(b.Url, url, StringComparison.OrdinalIgnoreCase));
+        Bookmark? bookmark = ExistingBookmarks?.FirstOrDefault(b => string.Equals(b.Url, url, StringComparison.OrdinalIgnoreCase));
 
         if (bookmark is not null)
         {
@@ -98,12 +98,12 @@ public class BookMarkService : IBookMarkService
         return false;
     }
 
-    public Bookmark GetBookmark(string bookmarkName)
+    public Bookmark? GetBookmark(string bookmarkName)
     {
-        return ExistingBookmarks.FirstOrDefault(b => string.Equals(b.Name, bookmarkName, StringComparison.OrdinalIgnoreCase));
+        return ExistingBookmarks?.FirstOrDefault(b => string.Equals(b.Name, bookmarkName, StringComparison.OrdinalIgnoreCase));
     }
 
-    public void ImportBookmarks(IEnumerable<Bookmark> bookmarks, bool merge)
+    public void Import(IEnumerable<Bookmark> bookmarks, bool merge)
     {
         if (!bookmarks.Any() || bookmarks is null)
         {
@@ -171,5 +171,10 @@ public class BookMarkService : IBookMarkService
     public IEnumerable<Bookmark> GetBookmarksByCategory(string category)
     {
         return ExistingBookmarks.Where(b => string.Equals(b.Category, category));
+    }
+
+    public void ClearAll()
+    {
+        ExistingBookmarks.Clear();
     }
 }

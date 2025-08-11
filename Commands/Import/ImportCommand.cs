@@ -3,7 +3,7 @@ using System.CommandLine;
 using System.CommandLine.Hosting;
 using System.Windows.Input;
 
-namespace bookmarkr.Commands.Export;
+namespace bookmarkr.Commands.Import;
 
 public class ImportCommand : Command
 {

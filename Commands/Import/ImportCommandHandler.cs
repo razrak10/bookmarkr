@@ -40,22 +40,22 @@ public class ImportCommandHandler : AsynchronousCommandLineAction
         }
         catch (UnauthorizedAccessException ex)
         {
-            LogManager.LogError($"Insufficient permission to access the file {inputFile.FullName}", ex);
+            LogManager.LogInformation($"Insufficient permission to access the file {inputFile.FullName}", ex);
             return;
         }
         catch (DirectoryNotFoundException ex)
         {
-            LogManager.LogError($"The file {inputFile.FullName} cannot be found due to an invalid path", ex);
+            LogManager.LogInformation($"The file {inputFile.FullName} cannot be found due to an invalid path", ex);
             return;
         }
         catch (PathTooLongException ex)
         {
-            LogManager.LogError($"Provided path exceeds max length.", ex);
+            LogManager.LogInformation($"Provided path exceeds max length.", ex);
             return;
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Error accessing file.", ex);
+            LogManager.LogInformation("Error accessing file.", ex);
             return;
         }
 
@@ -68,7 +68,7 @@ public class ImportCommandHandler : AsynchronousCommandLineAction
         }
         catch (Exception ex)
         {
-            LogManager.LogError($"Error occured while attempting to deserialize the imports file", ex);
+            LogManager.LogInformation($"Error occured while attempting to deserialize the imports file", ex);
             return;
         }
 

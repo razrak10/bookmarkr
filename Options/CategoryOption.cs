@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
 
 namespace bookmarkr.Options;
@@ -40,7 +41,12 @@ public class CategoryOption : Option<string[]>
 
     public CategoryOption AddDefaultCompletionSources(IEnumerable<string> categories)
     {
-        return this.AddDefaultCompletionSources(categories);
+        foreach (string category in categories)
+        {
+            this.CompletionSources.Add(category);
+        }
+
+        return this;
     }
 
 }

@@ -1,18 +1,17 @@
-﻿using System.CommandLine;
-using System.CommandLine.Parsing;
-using System.CommandLine.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Serilog;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Configuration;
-using bookmarkr.Commands;
-using Spectre.Console;
-using bookmarkr.Commands.Export;
-using bookmarkr.Service;
-using System.Windows.Input;
-using bookmarkr.Options;
-using bookmarkr.Commands.Interactive;
+﻿using bookmarkr.Commands;
 using bookmarkr.Commands.Category;
+using bookmarkr.Commands.Export;
+using bookmarkr.Commands.Import;
+using bookmarkr.Commands.Interactive;
+using bookmarkr.Commands.Sync;
+using bookmarkr.Options;
+using bookmarkr.Service;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Serilog;
+using System.CommandLine;
+using System.CommandLine.Hosting;
 
 namespace bookmarkr;
 
@@ -32,6 +31,26 @@ class Program
             builder.ConfigureServices((context, services) =>
             {
                 services.AddSingleton<IBookMarkService, BookMarkService>();
+                services.AddHttpClient();
+                services.AddHttpClient("bookmarkrSyncr", client =>
+                {
+                    client.BaseAddress = new Uri("https://bookmarkrsyncr-api.azurewebsites.net");
+                    client.DefaultRequestHeaders.Add("Accept", "application/json");
+                    client.DefaultRequestHeaders.Add("User-Agent", "Bookmarkr");
+                });
+
+                services.AddTransient<RootCommandHandler>();
+                services.AddTransient<InteractiveCommandHandler>();
+                services.AddTransient<LinkCommandHandler>();
+                services.AddTransient<LinkAddCommandHandler>();
+                services.AddTransient<LinkRemoveCommandHandler>();
+                services.AddTransient<LinkUpdateCommandHandler>();
+                services.AddTransient<ExportCommandHandler>();
+                services.AddTransient<ImportCommandHandler>();
+                services.AddTransient<ShowCommandHandler>();
+                services.AddTransient<CategoryCommandHandler>();
+                services.AddTransient<ChangeCommandHandler>();
+                services.AddTransient<SyncCommandHandler>();
             });
         });
 
@@ -86,7 +105,7 @@ class Program
         linkCommand.Subcommands.Add(updateLinkCommand);
 
         // Export bookmarks
-        Command exportCommand = new ImportCommand("export", "Exports all bookmarks to a file.")
+        Command exportCommand = new ExportCommand("export", "Exports all bookmarks to a file.")
         .AddOptions()
         .AssignCommandHandler();
         rootCommand.Add(exportCommand);
@@ -123,10 +142,13 @@ class Program
         rootCommand.Add(categoryCommand);
         categoryCommand.Subcommands.Add(changeCommand);
 
+        // Sync 
+        SyncCommand syncCommand = new SyncCommand("sync", "Sync bookmarks with external bookmarks storage.")
+            .AssignCommandHandler();
+        rootCommand.Add(syncCommand);
+
         commandLineConfig.Parse(args).InvokeAsync();
     }
-
-    //"https://learn.microsoft.com/en-us/dotnet/core/extensions/configuration-providers#json-configuration-provider",
 
     private static void CreateLogger()
     {
