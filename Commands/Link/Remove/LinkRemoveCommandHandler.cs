@@ -1,10 +1,8 @@
-using System;
 using System.CommandLine;
-using System.CommandLine.Invocation;
 
 namespace bookmarkr;
 
-public class LinkRemoveCommandHandler : AsynchronousCommandLineAction
+public class LinkRemoveCommandHandler
 {
     private readonly BookMarkService _bookmarkService;
 
@@ -13,13 +11,14 @@ public class LinkRemoveCommandHandler : AsynchronousCommandLineAction
         _bookmarkService = bookMarkService;
     }
 
-    public override Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         var name = parseResult.GetValue<string>("name");
 
         if (name is not null && !string.IsNullOrWhiteSpace(name))
         {
             OnHandleRemoveCommand(_bookmarkService, name);
+            return Task.FromResult(0);
         }
 
         return Task.FromResult(-1);

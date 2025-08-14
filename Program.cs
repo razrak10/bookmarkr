@@ -3,151 +3,137 @@ using bookmarkr.Commands.Category;
 using bookmarkr.Commands.Export;
 using bookmarkr.Commands.Import;
 using bookmarkr.Commands.Interactive;
+using bookmarkr.Commands.Link;
+using bookmarkr.Commands.Link.Add;
+using bookmarkr.Commands.Link.Remove;
+using bookmarkr.Commands.Link.Update;
+using bookmarkr.Commands.Show;
 using bookmarkr.Commands.Sync;
-using bookmarkr.Options;
-using bookmarkr.Service;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using System.CommandLine;
-using System.CommandLine.Hosting;
 
 namespace bookmarkr;
 
 class Program
 {
-    static void Main(string[] args)
+    private static IHost _host = null!;
+
+    static async Task<int> Main(string[] args)
     {
         FreeSerilogLoggerOnShutdown();
-
         CreateLogger();
+
+        IHost host = Host.CreateDefaultBuilder(args)
+             .ConfigureServices((hostcontext, services) =>
+             {
+
+                 services.AddSingleton<BookMarkService>();
+                 services.AddHttpClient();
+                 services.AddHttpClient("bookmarkrSyncr", client =>
+                 {
+                     client.BaseAddress = new Uri("https://bookmarkrsyncr-api.azurewebsites.net");
+                     client.DefaultRequestHeaders.Add("Accept", "application/json");
+                     client.DefaultRequestHeaders.Add("User-Agent", "Bookmarkr");
+                 });
+
+                 // Register command handlers
+                 services.AddTransient<RootCommandHandler>();
+                 services.AddTransient<InteractiveCommandHandler>();
+                 services.AddTransient<LinkCommandHandler>();
+                 services.AddTransient<LinkAddCommandHandler>();
+                 services.AddTransient<LinkRemoveCommandHandler>();
+                 services.AddTransient<LinkUpdateCommandHandler>();
+                 services.AddTransient<ExportCommandHandler>();
+                 services.AddTransient<ImportCommandHandler>();
+                 services.AddTransient<ShowCommandHandler>();
+                 services.AddTransient<CategoryCommandHandler>();
+                 services.AddTransient<ChangeCommandHandler>();
+                 services.AddTransient<SyncCommandHandler>();
+             })
+             .Build();
+
+        _host = host;
 
         RootCommand rootCommand = new RootCommand("Bookmarkr is a bookmark manager provided as a CLI application");
 
-        CommandLineConfiguration commandLineConfig = new CommandLineConfiguration(rootCommand);
-        commandLineConfig.UseHost((builder) =>
-        {
-            builder.ConfigureServices((context, services) =>
-            {
-                services.AddSingleton<IBookMarkService, BookMarkService>();
-                services.AddHttpClient();
-                services.AddHttpClient("bookmarkrSyncr", client =>
-                {
-                    client.BaseAddress = new Uri("https://bookmarkrsyncr-api.azurewebsites.net");
-                    client.DefaultRequestHeaders.Add("Accept", "application/json");
-                    client.DefaultRequestHeaders.Add("User-Agent", "Bookmarkr");
-                });
+        // Configure commands
+        ConfigureCommands(rootCommand);
 
-                services.AddTransient<RootCommandHandler>();
-                services.AddTransient<InteractiveCommandHandler>();
-                services.AddTransient<LinkCommandHandler>();
-                services.AddTransient<LinkAddCommandHandler>();
-                services.AddTransient<LinkRemoveCommandHandler>();
-                services.AddTransient<LinkUpdateCommandHandler>();
-                services.AddTransient<ExportCommandHandler>();
-                services.AddTransient<ImportCommandHandler>();
-                services.AddTransient<ShowCommandHandler>();
-                services.AddTransient<CategoryCommandHandler>();
-                services.AddTransient<ChangeCommandHandler>();
-                services.AddTransient<SyncCommandHandler>();
-            });
+        return await rootCommand.Parse(args).InvokeAsync();
+    }
+
+    private static void ConfigureCommands(RootCommand rootCommand)
+    {
+        // Root command action - async
+        rootCommand.SetAction((parseResult) =>
+        {
+            var handler = _host.Services.GetRequiredService<RootCommandHandler>();
+            var task = handler.HandleAsync(parseResult);
+            return task.GetAwaiter().GetResult();
         });
 
-        rootCommand.UseCommandHandler<RootCommandHandler>();
+        // Interactive Command - async
+        var interactiveHandler = _host.Services.GetRequiredService<InteractiveCommandHandler>();
+        var interactiveCommand = new InteractiveCommand(interactiveHandler, "interactive", "Manage bookmarks interactively");
+        interactiveCommand.AssignHandler();
+        rootCommand.Add(interactiveCommand);
 
-        // Interactive Command
-        Command interactiveCommand = new InteractiveCommand("interactive", "Manage bookmarks interactively")
-        .AssignCommandHandler();
-        rootCommand.Subcommands.Add(interactiveCommand);
+        // Link commands - async
+        var linkHandler = _host.Services.GetRequiredService<LinkCommandHandler>();
+        var linkCommand = new LinkCommand(linkHandler, "link", "Manage bookmarks links");
+        linkCommand.AssignHandler();
+        rootCommand.Add(linkCommand);
 
-        // List bookmarks
-        var listOption = new ListOption("list", ["--list", "-l"]);
-        var linkCommand = new Command("link", "Manage bookmarks links")
-        {
-            listOption
-        };
-        linkCommand.UseCommandHandler<LinkCommandHandler>();
-        rootCommand.Subcommands.Add(linkCommand);
+        // Add link command - async
+        var addLinkHandler = _host.Services.GetRequiredService<LinkAddCommandHandler>();
+        var addLinkCommand = new LinkAddCommand(addLinkHandler, "add", "Add a new bookmark link");
+        addLinkCommand.AssignHandler();
+        linkCommand.Add(addLinkCommand);
 
-        // Add bookmarks
-        Option nameOption = new NameOption("name", ["--name", "-n"], arity: ArgumentArity.OneOrMore);
-        Option urlOption = new UrlOption("url", ["--url", "-u"], arity: ArgumentArity.OneOrMore).AddDefaultValidators();
-        Option categoryOption = new CategoryOption("category", ["--category", "-c"], arity: ArgumentArity.OneOrMore, defaultValues: ["Read later"])
-        .AddDefaultValidators(["Read later", "Tech books", "Cooking", "Social media"])
-        .AddDefaultCompletionSources(["Read later", "Tech books", "Cooking", "Social media"]);
-        var addLinkCommand = new Command("add", "Add a new bookmark link")
-        {
-            nameOption,
-            urlOption,
-            categoryOption
-        };
-        addLinkCommand.UseCommandHandler<LinkAddCommandHandler>();
-        linkCommand.Subcommands.Add(addLinkCommand);
+        // Remove link command - async
+        var removeLinkHandler = _host.Services.GetRequiredService<LinkRemoveCommandHandler>();
+        var removeLinkCommand = new LinkRemoveCommand(removeLinkHandler, "remove", "Removes a bookmark link");
+        removeLinkCommand.AssignHandler();
+        linkCommand.Add(removeLinkCommand);
 
-        //TODO: Extract the rest of the options into their own classes
-        // Remove bookmarks
-        var removeOption = new Option<string>("name", ["--name", "-n"]);
-        var removeLinkCommand = new Command("remove", "Removes a bookmark link")
-        {
-            removeOption
-        };
-        removeLinkCommand.UseCommandHandler<LinkRemoveCommandHandler>();
-        linkCommand.Subcommands.Add(removeLinkCommand);
+        // Update link command - async
+        var updateLinkHandler = _host.Services.GetRequiredService<LinkUpdateCommandHandler>();
+        var updateLinkCommand = new LinkUpdateCommand(updateLinkHandler, "update", "Updates an existing bookmark");
+        updateLinkCommand.AssignHandler();
+        linkCommand.Add(updateLinkCommand);
 
-        // Update bookmarks
-        Command updateLinkCommand = new Command("update", "Updates and existing bookmark.")
-        {
-            nameOption,
-            urlOption
-        };
-        updateLinkCommand.UseCommandHandler<LinkUpdateCommandHandler>();
-        linkCommand.Subcommands.Add(updateLinkCommand);
-
-        // Export bookmarks
-        Command exportCommand = new ExportCommand("export", "Exports all bookmarks to a file.")
-        .AddOptions()
-        .AssignCommandHandler();
+        // Export command - async
+        var exportHandler = _host.Services.GetRequiredService<ExportCommandHandler>();
+        var exportCommand = new ExportCommand(exportHandler, "export", "Exports all bookmarks to a file.").AddOptions();
+        exportCommand.AssignHandler();
         rootCommand.Add(exportCommand);
 
-        // Import bookmarks
-        Command importCommand = new ImportCommand("import", "Imports all bookmarks from a file.")
-        .AddOptions()
-        .AssignCommandHandler();
+        // Import command - async
+        var importHandler = _host.Services.GetRequiredService<ImportCommandHandler>();
+        var importCommand = new ImportCommand(importHandler, "import", "Import bookmarks from a file").AddOptions();
+        importCommand.AssignHandler();
         rootCommand.Add(importCommand);
 
-        // Show bookmark
-        Command showCommand = new Command("show", "Shows bookmark in a formatted table.")
-        {
-            nameOption
-        };
-        showCommand.UseCommandHandler<ShowCommandHandler>();
-        linkCommand.Subcommands.Add(showCommand);
+        // Show command - async
+        var showHandler = _host.Services.GetRequiredService<ShowCommandHandler>();
+        var showCommand = new ShowCommand(showHandler, "show", "Show details of a specific bookmark");
+        showCommand.AssignHandler();
+        rootCommand.Add(showCommand);
 
-        // Change bookmark category
-        Command categoryCommand = new Command("category", "Bookmark category specific functions.");
-        categoryCommand.UseCommandHandler<CategoryCommandHandler>();
-
-        Option forUrlOption = new Option<string>("forUrl", ["--for-url", "-fu"])
-        {
-            Required = true,
-            Arity = ArgumentArity.ExactlyOne
-        };
-        Command changeCommand = new Command("change", "Change bookmark category.")
-        {
-            forUrlOption
-        };
-        changeCommand.UseCommandHandler<ChangeCommandHandler>();
-
-        rootCommand.Add(categoryCommand);
-        categoryCommand.Subcommands.Add(changeCommand);
-
-        // Sync 
-        SyncCommand syncCommand = new SyncCommand("sync", "Sync bookmarks with external bookmarks storage.")
-            .AssignCommandHandler();
+        // Sync command - async
+        var syncHandler = _host.Services.GetRequiredService<SyncCommandHandler>();
+        var syncCommand = new SyncCommand(syncHandler, "sync", "Sync bookmarks with remote server")
+            .AssignAction();
         rootCommand.Add(syncCommand);
 
-        commandLineConfig.Parse(args).InvokeAsync();
+        // Category command - async
+        var categoryHandler = _host.Services.GetRequiredService<CategoryCommandHandler>();
+        var categoryCommand = new CategoryCommand(categoryHandler, "category", "Manage bookmark categories")
+            .AssignHandler();
+        rootCommand.Add(categoryCommand);
     }
 
     private static void CreateLogger()

@@ -1,17 +1,33 @@
 using System.CommandLine;
-using System.CommandLine.Hosting;
 
 namespace bookmarkr.Commands.Sync;
 
 public class SyncCommand : Command
 {
-    public SyncCommand(string name, string? description = null) : base(name, description)
+    private readonly SyncCommandHandler _syncCommandHandler;
+
+    public SyncCommand(
+        SyncCommandHandler syncCommandHandler,
+        string name,
+        string? description = null
+    ) : base(name, description)
     {
+        _syncCommandHandler = syncCommandHandler;
     }
 
-    public SyncCommand AssignCommandHandler()
+    public SyncCommand AssignAction(Action<ParseResult>? action = default)
     {
-        this.UseCommandHandler<SyncCommandHandler>();
+        if (action is not null)
+        {
+            this.SetAction(action);
+        }
+        else
+        {
+            this.SetAction(async (parseResult) =>
+            {
+                await _syncCommandHandler.HandleAsync(parseResult);
+            });
+        }
 
         return this;
     }

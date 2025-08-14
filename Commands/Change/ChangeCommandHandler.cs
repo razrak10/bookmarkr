@@ -1,11 +1,10 @@
 using System;
 using System.CommandLine;
-using System.CommandLine.Invocation;
 using Spectre.Console;
 
 namespace bookmarkr.Commands;
 
-public class ChangeCommandHandler : AsynchronousCommandLineAction
+public class ChangeCommandHandler
 {
     private readonly BookMarkService _bookmarkService;
 
@@ -14,7 +13,7 @@ public class ChangeCommandHandler : AsynchronousCommandLineAction
         _bookmarkService = bookMarkService;
     }
 
-    public override Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         var url = parseResult.GetValue<string>("forUrl");
         if (!string.IsNullOrWhiteSpace(url))

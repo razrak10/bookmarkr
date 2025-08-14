@@ -1,18 +1,19 @@
+﻿using bookmarkr.Commands.Category;
 using System.CommandLine;
 
-namespace bookmarkr.Commands.Interactive;
+namespace bookmarkr.Commands.Sync;
 
-public class InteractiveCommand : Command, ICommandAssigner
+public class CategoryCommand : Command, ICommandAssigner
 {
-    private readonly InteractiveCommandHandler _handler;
+    private readonly CategoryCommandHandler _categoryCommandHandler;
 
-    public InteractiveCommand(
-        InteractiveCommandHandler handler,
+    public CategoryCommand(
+        CategoryCommandHandler categoryCommandHandler,
         string name,
         string? description = null
     ) : base(name, description)
     {
-        _handler = handler;
+        _categoryCommandHandler = categoryCommandHandler;
     }
 
     public Command AssignHandler(Action<ParseResult>? action = default)
@@ -25,7 +26,7 @@ public class InteractiveCommand : Command, ICommandAssigner
         {
             this.SetAction(async (parseResult) =>
             {
-                await _handler.HandleAsync(parseResult);
+                await _categoryCommandHandler.HandleAsync(parseResult);
             });
         }
 

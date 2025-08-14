@@ -1,13 +1,12 @@
 using System;
 using System.CommandLine;
-using System.CommandLine.Invocation;
 using System.Text.Json;
 using bookmarkr.Models;
 using Serilog;
 
 namespace bookmarkr;
 
-public class ImportCommandHandler : AsynchronousCommandLineAction
+public class ImportCommandHandler
 {
     private readonly BookMarkService _bookmarkService;
 
@@ -16,7 +15,7 @@ public class ImportCommandHandler : AsynchronousCommandLineAction
         _bookmarkService = bookmarkService;
     }
 
-    public override Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         FileInfo? inputFile = parseResult.GetValue<FileInfo>("file");
         bool merge = parseResult.GetValue<bool>("merge");
@@ -24,6 +23,7 @@ public class ImportCommandHandler : AsynchronousCommandLineAction
         if (inputFile is not null)
         {
             OnImportCommand(inputFile, merge);
+            return Task.FromResult(0);
         }
 
         return Task.FromResult(-1);

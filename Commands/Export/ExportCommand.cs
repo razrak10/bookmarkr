@@ -1,21 +1,25 @@
 using System;
 using System.CommandLine;
-using System.CommandLine.Hosting;
-using System.Windows.Input;
 
 namespace bookmarkr.Commands.Export;
 
-public class ExportCommand : Command
+public class ExportCommand : Command, ICommandAssigner
 {
-    //TODO: Create options folder and classes
+    private readonly ExportCommandHandler _handler;
+
     Option<FileInfo> outputFileOption = new Option<FileInfo>("file", ["--file", "-f"])
     {
         Required = true,
         Description = "The output file that will store the bookmarks",
     }.AcceptLegalFileNamesOnly();
 
-    public ExportCommand(string name, string? description = null) : base(name, description)
+    public ExportCommand(
+        ExportCommandHandler handler,
+        string name,
+        string? description = null)
+        : base(name, description)
     {
+        _handler = handler;
     }
 
     public ExportCommand AddOptions()
@@ -25,9 +29,19 @@ public class ExportCommand : Command
         return this;
     }
 
-    public ExportCommand AssignCommandHandler()
+    public Command AssignHandler(Action<ParseResult>? action = default)
     {
-        this.UseCommandHandler<ExportCommandHandler>();
+        if (action is not null)
+        {
+            this.SetAction(action);
+        }
+        else
+        {
+            this.SetAction(async (parseResult) =>
+            {
+                await _handler.HandleAsync(parseResult);
+            });
+        }
 
         return this;
     }

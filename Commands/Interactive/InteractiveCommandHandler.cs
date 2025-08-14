@@ -1,11 +1,9 @@
-using System;
-using System.CommandLine;
-using System.CommandLine.Invocation;
 using Spectre.Console;
+using System.CommandLine;
 
 namespace bookmarkr.Commands;
 
-public class InteractiveCommandHandler : AsynchronousCommandLineAction
+public class InteractiveCommandHandler
 {
     private readonly BookMarkService _bookmarkService;
 
@@ -14,7 +12,7 @@ public class InteractiveCommandHandler : AsynchronousCommandLineAction
         _bookmarkService = bookmarkService;
     }
 
-    public override Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         OnInteractiveCommand();
         return Task.FromResult(0);

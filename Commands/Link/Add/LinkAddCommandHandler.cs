@@ -1,10 +1,9 @@
 using System;
 using System.CommandLine;
-using System.CommandLine.Invocation;
 
 namespace bookmarkr;
 
-public class LinkAddCommandHandler : AsynchronousCommandLineAction
+public class LinkAddCommandHandler
 {
     private readonly BookMarkService _bookmarkService;
 
@@ -13,7 +12,7 @@ public class LinkAddCommandHandler : AsynchronousCommandLineAction
         _bookmarkService = service;
     }
 
-    public override Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         var names = parseResult.GetValue<string[]>("name");
         var urls = parseResult.GetValue<string[]>("url");

@@ -1,13 +1,11 @@
-using System;
 using System.CommandLine;
-using System.CommandLine.Hosting;
-using System.Windows.Input;
 
 namespace bookmarkr.Commands.Import;
 
-public class ImportCommand : Command
+public class ImportCommand : Command, ICommandAssigner
 {
-    //TODO: Create options folder and classes
+    private readonly ImportCommandHandler _handler;
+
     private Option<FileInfo> inputFileOption = new Option<FileInfo>("file", ["--file", "-f"])
     {
         Required = true,
@@ -22,8 +20,13 @@ public class ImportCommand : Command
         Arity = ArgumentArity.Zero
     };
 
-    public ImportCommand(string name, string? description = null) : base(name, description)
+    public ImportCommand(
+        ImportCommandHandler handler,
+        string name,
+        string? description = null
+    ) : base(name, description)
     {
+        _handler = handler;
     }
 
     public ImportCommand AddOptions(Option<FileInfo>? fileOption = null, Option<bool>? mergeOption = null)
@@ -34,9 +37,19 @@ public class ImportCommand : Command
         return this;
     }
 
-    public ImportCommand AssignCommandHandler()
+    public Command AssignHandler(Action<ParseResult>? action = default)
     {
-        this.UseCommandHandler<ImportCommandHandler>();
+        if (action is not null)
+        {
+            this.SetAction(action);
+        }
+        else
+        {
+            this.SetAction((parseResult) =>
+            {
+                return _handler.HandleAsync(parseResult);
+            });
+        }
 
         return this;
     }

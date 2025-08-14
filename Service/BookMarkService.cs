@@ -131,6 +131,8 @@ public class BookMarkService : IBookMarkService
                 }
             }
         }
+
+        PrintBookmarks();
     }
 
     public async void ExportBookmarksAsync(IEnumerable<Bookmark> bookmarks, FileInfo outputFile, CancellationToken cancellationToken = default)
@@ -177,4 +179,13 @@ public class BookMarkService : IBookMarkService
     {
         ExistingBookmarks.Clear();
     }
+
+    public void PrintBookmarks()
+    {
+        foreach (var bookmark in ExistingBookmarks)
+        {
+            Console.WriteLine(bookmark.ToString());
+        }
+    }
+
 }

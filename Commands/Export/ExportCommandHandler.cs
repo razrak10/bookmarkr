@@ -1,11 +1,9 @@
-using System;
 using System.CommandLine;
-using System.CommandLine.Invocation;
 using System.Text.Json;
 
 namespace bookmarkr.Commands;
 
-public class ExportCommandHandler : AsynchronousCommandLineAction
+public class ExportCommandHandler
 {
     private readonly BookMarkService _bookmarkService;
 
@@ -14,7 +12,7 @@ public class ExportCommandHandler : AsynchronousCommandLineAction
         _bookmarkService = bookMarkService;
     }
 
-    public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public async Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         FileInfo? outputFile = parseResult.GetValue<FileInfo>("file");
         if (outputFile is not null)

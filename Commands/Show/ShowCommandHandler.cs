@@ -1,10 +1,8 @@
 using Spectre.Console;
 using System.CommandLine;
-using System.CommandLine.Invocation;
 
-namespace bookmarkr.Commands;
-
-public class ShowCommandHandler : AsynchronousCommandLineAction
+namespace bookmarkr.Commands.Show;
+public class ShowCommandHandler
 {
     private readonly BookMarkService _bookmarkService;
 
@@ -13,7 +11,7 @@ public class ShowCommandHandler : AsynchronousCommandLineAction
         _bookmarkService = bookMarkService;
     }
 
-    public override Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         string[]? bookmarkNames = parseResult.GetValue<string[]>("name");
         string? bookname = bookmarkNames?.FirstOrDefault();

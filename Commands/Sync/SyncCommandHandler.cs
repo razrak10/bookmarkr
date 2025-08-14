@@ -1,11 +1,10 @@
 using System.CommandLine;
-using System.CommandLine.Invocation;
 using System.Text;
 using System.Text.Json;
 
 namespace bookmarkr.Commands.Sync;
 
-public class SyncCommandHandler : AsynchronousCommandLineAction
+public class SyncCommandHandler
 {
     private readonly BookMarkService _bookmarkService;
     private readonly IHttpClientFactory _clientFactory;
@@ -16,7 +15,7 @@ public class SyncCommandHandler : AsynchronousCommandLineAction
         _bookmarkService = bookMarkService;
     }
 
-    public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public async Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellation = default)
     {
         await OnSyncCommand();
         return 0;
@@ -51,7 +50,7 @@ public class SyncCommandHandler : AsynchronousCommandLineAction
                     _bookmarkService.ClearAll();
                     _bookmarkService.Import(mergedBookmarks, merge: true);
                 }
-                LogManager.LogInformation("Successfully synced bookmarks");
+                CommandHelper.ShowSuccessMessage(["Successfully synced bookmarks"]);
             }
             else
             {
