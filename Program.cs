@@ -35,7 +35,7 @@ class Program
                  // Add Entity Framework
                  services.AddDbContext<BookmarkrDbContext>(options => options.UseSqlite("Data Source=bookmarks.db"));
 
-                 // Register Respository
+                 // Register Repository
 
                  // Register BookMarkService
                  services.AddSingleton<BookMarkService>();
@@ -64,7 +64,7 @@ class Program
                  services.AddTransient<SyncCommandHandler>();
 
                  // Register service agent
-                 services.AddScoped<IBookmarkrSyncrServiceAgent,  BookmarkrSyncrServiceAgent>();
+                 services.AddScoped<IBookmarkrSyncrServiceAgent, BookmarkrSyncrServiceAgent>();
              })
              .Build();
 

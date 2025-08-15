@@ -33,7 +33,7 @@ namespace bookmarkr.Persistence
                     return ExecutionResult<Bookmark>.Success(bookmark);
                 }
 
-                return ExecutionResult<Bookmark>.Failure("Bookmark to delete was null or empty.");
+                return ExecutionResult<Bookmark>.Failure("Bookmark to add was null or empty.");
             }
             catch (DbUpdateException ex)
             {
@@ -45,7 +45,15 @@ namespace bookmarkr.Persistence
             }
             catch (Exception ex)
             {
-                return ExecutionResult<Bookmark>.Failure("Unexpected error occured.", ex);
+                return ExecutionResult<Bookmark>.Failure("Error occurred while adding bookmark to database.", ex);
+            }
+            catch (DbException ex)
+            {
+                return ExecutionResult<Bookmark>.Failure("Database error occurred.", ex);
+            }
+            catch (Exception ex)
+            {
+                return ExecutionResult<Bookmark>.Failure("Unexpected error occurred.", ex);
             }
             finally
             {
@@ -174,7 +182,7 @@ namespace bookmarkr.Persistence
                     return ExecutionResult<IQueryable<T>>.Success(queryableResult);
                 }
 
-                return ExecutionResult<IQueryable<T>>.Failure($"No bookmarks found desired condition.");
+                return ExecutionResult<IQueryable<T>>.Failure("No bookmarks found for the desired condition.");
             }
             catch (DbException ex)
             {

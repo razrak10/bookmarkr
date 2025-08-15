@@ -18,12 +18,12 @@ namespace bookmarkr.Persistence
             builder.Property(b => b.Name)
                 .HasColumnName("Name")
                 .IsRequired()
-                .HasMaxLength(2058);
+                .HasMaxLength(255);
 
             builder.Property(b => b.Url)
                 .HasColumnName("URL")
                 .IsRequired()
-                .HasMaxLength(255);
+                .HasMaxLength(2048);
 
             builder.Property(b => b.Category)
                 .HasColumnName("Category")
