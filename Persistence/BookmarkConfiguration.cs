@@ -1,0 +1,49 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace bookmarkr.Persistence
+{
+    internal class BookmarkConfiguration : IEntityTypeConfiguration<Bookmark>
+    {
+        public void Configure(EntityTypeBuilder<Bookmark> builder)
+        {
+            builder.ToTable("Bookmarks");
+
+            builder.HasKey(b => b.Id);
+
+            builder.Property(b => b.Id)
+                .HasColumnName("BookmarkId")
+                .IsRequired();
+
+            builder.Property(b => b.Name)
+                .HasColumnName("Name")
+                .IsRequired()
+                .HasMaxLength(255);
+
+            builder.Property(b => b.Url)
+                .HasColumnName("URL")
+                .IsRequired()
+                .HasMaxLength(2048);
+
+            builder.Property(b => b.Category)
+                .HasColumnName("Category")
+                .IsRequired()
+                .HasMaxLength(100);
+
+            builder.Property(b => b.CreatedAt)
+                .HasDefaultValueSql("datetime('now')");
+
+            builder.Property(b => b.UpdatedAt)
+                .HasDefaultValueSql("datetime('now')");
+
+            // Seed initial data
+            builder.HasData(
+                new Bookmark { Id = 1, Name = "First", Category = "Cars", Url = "https://www.lol.com" },
+                new Bookmark { Id = 2, Name = "Second", Category = "Tech", Url = "https://www.second.com" },
+                new Bookmark { Id = 3, Name = "Third", Category = "Tech", Url = "https://www.third.com" },
+                new Bookmark { Id = 4, Name = "Fourth", Category = "Cooking", Url = "https://www.cooking.com" },
+                new Bookmark { Id = 5, Name = "Fifth", Category = "SocialMedia", Url = "https://www.social.com" }
+            );
+        }
+    }
+}

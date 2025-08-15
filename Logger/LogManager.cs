@@ -2,7 +2,7 @@ using System;
 using System.Text;
 using Serilog;
 
-namespace bookmarkr;
+namespace bookmarkr.Logger;
 
 public static class LogManager
 {

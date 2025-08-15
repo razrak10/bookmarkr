@@ -74,7 +74,7 @@ public class InteractiveCommandHandler
             ])
         .Start(ctx =>
         {
-            IReadOnlyCollection<Bookmark> bookmarks = _bookmarkService.GetAll();
+            List<Bookmark> bookmarks = _bookmarkService.GetAll().ToList();
 
             ProgressTask task = ctx.AddTask("[yellow]exporting all bookmarks to file...[/]");
 

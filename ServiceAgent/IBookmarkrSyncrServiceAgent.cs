@@ -2,7 +2,7 @@
 
 namespace bookmarkr.ServiceAgent
 {
-    internal interface IBookmarkrSyncrServiceAgent
+    public interface IBookmarkrSyncrServiceAgent
     {
         Task<ExecutionResult<List<Bookmark>>> SyncBookmarksAsync(List<Bookmark> localBookmarks);
     }

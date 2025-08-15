@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json;
+using bookmarkr.Helpers;
 using bookmarkr.Models;
 using bookmarkr.Service;
 
@@ -75,7 +76,7 @@ public class BookMarkService : IBookMarkService
         CommandHelper.ShowSuccessMessage(["Bookmark successfully added!"]);
     }
 
-    public IReadOnlyCollection<Bookmark> GetAll()
+    public IEnumerable<Bookmark> GetAll()
     {
         return ExistingBookmarks;
     }

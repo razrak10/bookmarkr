@@ -1,6 +1,8 @@
 using System;
 using System.CommandLine;
 using System.Text.Json;
+using bookmarkr.Helpers;
+using bookmarkr.Logger;
 using bookmarkr.Models;
 using Serilog;
 
