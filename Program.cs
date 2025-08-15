@@ -9,6 +9,9 @@ using bookmarkr.Commands.Link.Remove;
 using bookmarkr.Commands.Link.Update;
 using bookmarkr.Commands.Show;
 using bookmarkr.Commands.Sync;
+using bookmarkr.Persistence;
+using bookmarkr.ServiceAgent;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -29,8 +32,15 @@ class Program
         IHost host = Host.CreateDefaultBuilder(args)
              .ConfigureServices((hostcontext, services) =>
              {
+                 // Add Entity Framework
+                 services.AddDbContext<BookmarkrDbContext>(options => options.UseSqlite("Data Source=bookmarks.db"));
 
+                 // Register Respository
+
+                 // Register BookMarkService
                  services.AddSingleton<BookMarkService>();
+
+                 // Register HttpClient
                  services.AddHttpClient();
                  services.AddHttpClient("bookmarkrSyncr", client =>
                  {
@@ -52,6 +62,9 @@ class Program
                  services.AddTransient<CategoryCommandHandler>();
                  services.AddTransient<ChangeCommandHandler>();
                  services.AddTransient<SyncCommandHandler>();
+
+                 // Register service agent
+                 services.AddScoped<IBookmarkrSyncrServiceAgent,  BookmarkrSyncrServiceAgent>();
              })
              .Build();
 

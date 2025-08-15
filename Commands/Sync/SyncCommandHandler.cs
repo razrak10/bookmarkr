@@ -1,18 +1,19 @@
+using bookmarkr.ExecutionResult;
+using bookmarkr.Helpers;
+using bookmarkr.ServiceAgent;
 using System.CommandLine;
-using System.Text;
-using System.Text.Json;
 
 namespace bookmarkr.Commands.Sync;
 
 public class SyncCommandHandler
 {
     private readonly BookMarkService _bookmarkService;
-    private readonly IHttpClientFactory _clientFactory;
+    private readonly IBookmarkrSyncrServiceAgent _serviceAgent;
 
-    public SyncCommandHandler(IHttpClientFactory clientFactory, BookMarkService bookMarkService)
+    public SyncCommandHandler(BookMarkService bookMarkService, IBookmarkrSyncrServiceAgent serviceAgent)
     {
-        _clientFactory = clientFactory;
         _bookmarkService = bookMarkService;
+        _serviceAgent = serviceAgent;
     }
 
     public async Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellation = default)
@@ -23,59 +24,18 @@ public class SyncCommandHandler
 
     private async Task OnSyncCommand()
     {
-        IReadOnlyCollection<Bookmark> retrievedBookmarks = _bookmarkService.GetAll();
+        List<Bookmark> retrievedBookmarks = _bookmarkService.GetAll().ToList();
 
-        try
+        ExecutionResult<List<Bookmark>> executionResult = await _serviceAgent.SyncBookmarksAsync(retrievedBookmarks);
+
+        if (!executionResult.IsSuccess)
         {
-            string serializedRetrievedBookmarks = JsonSerializer.Serialize(retrievedBookmarks);
-            var content = new StringContent(serializedRetrievedBookmarks, Encoding.UTF8, "application/json");
-
-            var httpClient = _clientFactory.CreateClient("bookmarkrSyncr");
-            var response = await httpClient.PostAsync("sync", content);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                };
-
-                var mergedBookmarks = await JsonSerializer.DeserializeAsync<List<Bookmark>>(
-                    await response.Content.ReadAsStreamAsync(),
-                    options
-                );
-
-                if (mergedBookmarks is not null && mergedBookmarks.Any(b => b is not null))
-                {
-                    _bookmarkService.ClearAll();
-                    _bookmarkService.Import(mergedBookmarks, merge: true);
-                }
-                CommandHelper.ShowSuccessMessage(["Successfully synced bookmarks"]);
-            }
-            else
-            {
-                switch (response.StatusCode)
-                {
-                    case System.Net.HttpStatusCode.NotFound:
-                        LogManager.LogError("Resource not found");
-                        break;
-                    case System.Net.HttpStatusCode.Unauthorized:
-                        LogManager.LogError("Unauthorized access");
-                        break;
-                    default:
-                        var error = await response.Content.ReadAsStringAsync();
-                        LogManager.LogError($"Failed to sync bookmarks | {error}");
-                        break;
-                }
-            }
+            CommandHelper.ShowErrorMessage([$"{executionResult.Message}", $"{executionResult.Exception?.Message}"]);
         }
-        catch (JsonException ex)
+        else
         {
-            CommandHelper.ShowErrorMessage([$"Failed to serialize bookmarks to JSON format.\nError message: {ex.Message}"]);
-        }
-        catch (Exception ex)
-        {
-            CommandHelper.ShowErrorMessage([$"Unknown exception has occured\nError message: {ex.Message}"]);
+
+            CommandHelper.ShowSuccessMessage([$"Bookmarks synchronized successfully."]);
         }
     }
 }

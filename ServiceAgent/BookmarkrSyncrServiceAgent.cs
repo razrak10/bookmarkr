@@ -1,11 +1,12 @@
 ﻿using bookmarkr.ExecutionResult;
+using bookmarkr.Logger;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 
 namespace bookmarkr.ServiceAgent
 {
-    internal class BookmarkrSyncrServiceAgent : IBookmarkrSyncrServiceAgent
+    public class BookmarkrSyncrServiceAgent : IBookmarkrSyncrServiceAgent
     {
         private readonly IHttpClientFactory _clientFactory;
 
@@ -40,6 +41,7 @@ namespace bookmarkr.ServiceAgent
 
                     if (mergedBookmarks is not null && mergedBookmarks.Any())
                     {
+                        LogManager.LogInformation("Bookmarks synchronized successfully.");
                         return ExecutionResult<List<Bookmark>>.Success(mergedBookmarks ?? new List<Bookmark>());
                     }
                 }
@@ -52,6 +54,7 @@ namespace bookmarkr.ServiceAgent
                         _ => $"Failed to sync bookmarks: {response.StatusCode} | {await response.Content.ReadAsStringAsync()}"
                     };
 
+                    LogManager.LogError(errorMessage);
                     return ExecutionResult<List<Bookmark>>.Failure(errorMessage);
                 }
 

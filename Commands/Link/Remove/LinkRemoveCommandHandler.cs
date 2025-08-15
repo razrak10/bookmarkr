@@ -1,3 +1,4 @@
+using bookmarkr.Helpers;
 using System.CommandLine;
 
 namespace bookmarkr;

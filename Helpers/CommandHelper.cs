@@ -2,7 +2,7 @@ using System;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
-namespace bookmarkr;
+namespace bookmarkr.Helpers;
 
 public class CommandHelper
 {
