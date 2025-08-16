@@ -1,139 +1,137 @@
-using System;
-using System.Text.Json;
-using bookmarkr.Helpers;
+using bookmarkr.ExecutionResult;
 using bookmarkr.Models;
+using bookmarkr.Persistence;
 using bookmarkr.Service;
+using System.Text.Json;
 
 namespace bookmarkr;
 
 public class BookMarkService : IBookMarkService
 {
-    private readonly HashSet<string> _categories = new()
+    private readonly BookmarkRepository _repository;
+
+    public BookMarkService(BookmarkRepository repository)
     {
-        "Cars",
-        "Tech",
-        "SocialMedia",
-        "Cooking"
-    };
+        _repository = repository;
+    }
 
-    private readonly List<Bookmark> _existingBookmarks = new List<Bookmark>
-    {
-        new Bookmark {
-            Name = "First",
-            Category = "Cars",
-            Url = "https://www.lol.com"
-        },
-        new Bookmark {
-            Name = "Second",
-            Category = "Tech",
-            Url = "https://www.seocnd.com"
-        },
-        new Bookmark {
-            Name = "First",
-            Category = "Tech",
-            Url = "https://www.lol.com"
-        },
-        new Bookmark {
-            Name = "First",
-            Category = "Cooking",
-            Url = "https://www.lol.com"
-        },
-        new Bookmark {
-            Name = "First",
-            Category = "SocialMedia",
-            Url = "https://www.lol.com"
-        },
-    };
-
-    public HashSet<string> Categories => _categories;
-    public List<Bookmark> ExistingBookmarks => _existingBookmarks;
-
-    public void AddLink(string name, string url, string category)
+    public async Task<ExecutionResult<bool>> AddLinkAsync(string name, string url, string category)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
-            CommandHelper.ShowErrorMessage(["the `name` for the link is not provided. The expected sytnax is:", "bookmarkr link add <name> <url>"]);
-            return;
+            return ExecutionResult<bool>.Failure("the `name` for the link is not provided. The expected sytnax is:\", \"bookmarkr link add <name> <url>");
         }
 
         if (string.IsNullOrWhiteSpace(url))
         {
-            CommandHelper.ShowErrorMessage(["the `url` for the link is not provided. The expected sytnax is:", "bookmarkr link add <name> <url>"]);
-            return;
-        }
-        if (ExistingBookmarks.Any(b => b.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-        {
-            CommandHelper.ShowErrorMessage(["A link with the name `{name}` already exists. It will thus not be added", $"To update the existing link, use the command: bookmarkr link update `{name}` `{url}`"]);
-            return;
+            return ExecutionResult<bool>.Failure("the `url` for the link is not provided. The expected sytnax is:\", \"bookmarkr link add <name> <url>");
         }
 
-        ExistingBookmarks.Add(new Bookmark
+        var findExecutionResult = await _repository.FindBookmarkByName(name, false);
+        if (!findExecutionResult.IsSuccess)
+        {
+            return findExecutionResult.ToFailure<bool>();
+        }
+
+        Bookmark existingBookmark = findExecutionResult.Value;
+
+        if (existingBookmark is not null)
+        {
+            return ExecutionResult<bool>.Failure($"A bookmark with the name `{name}` already exists. It will thus not be added");
+        }
+
+        await _repository.AddAsync(new Bookmark
         {
             Name = name,
             Url = url,
             Category = category
         });
-        CommandHelper.ShowSuccessMessage(["Bookmark successfully added!"]);
+
+        return ExecutionResult<bool>.Success(true);
     }
 
-    public IEnumerable<Bookmark> GetAll()
-    {
-        return ExistingBookmarks;
-    }
 
-    public IEnumerable<string> GetCategories()
+    public async Task<ExecutionResult<IEnumerable<string>>> GetExistingCategoriesAsync()
     {
-        return Categories;
-    }
+        var executionResult = await _repository.FindAllAsync(false);
 
-    public bool ChangeBookmarkCategory(string url, string category)
-    {
-        Bookmark? bookmark = ExistingBookmarks?.FirstOrDefault(b => string.Equals(b.Url, url, StringComparison.OrdinalIgnoreCase));
-
-        if (bookmark is not null)
+        if (!executionResult.IsSuccess)
         {
-            bookmark.Category = category;
-            return true;
+            return executionResult.ToFailure<IEnumerable<string>>();
         }
 
-        return false;
+        var bookmarks = executionResult.Value;
+
+        if (bookmarks is not null && bookmarks.Any())
+        {
+            var categories = bookmarks
+                .Where(book => !string.IsNullOrWhiteSpace(book.Category))
+                .Select(book => book.Category!)
+                .Distinct();
+
+            return ExecutionResult<IEnumerable<string>>.Success(categories);
+        }
+
+        return ExecutionResult<IEnumerable<string>>.Failure("No categories were found.");
     }
 
-    public Bookmark? GetBookmark(string bookmarkName)
+    public async Task<ExecutionResult<bool>> ChangeBookmarkCategoryAsync(string url, string category)
     {
-        return ExistingBookmarks?.FirstOrDefault(b => string.Equals(b.Name, bookmarkName, StringComparison.OrdinalIgnoreCase));
+        var executionResult = await _repository.FindBookmarkByUrl(url, isTrackingChanges: true);
+
+        if (!executionResult.IsSuccess)
+        {
+            return executionResult.ToFailure<bool>();
+        }
+
+        Bookmark? existingBookmark = executionResult.Value;
+
+        if (existingBookmark is null)
+        {
+            return ExecutionResult<bool>.Failure($"No bookmark found with URL: {url}. No category change applied.");
+        }
+
+        existingBookmark.Category = category;
+
+        return ExecutionResult<bool>.Success(true);
     }
 
-    public void Import(IEnumerable<Bookmark> bookmarks, bool merge)
+    public async Task<ExecutionResult<IEnumerable<Bookmark>>> GetBookmarksAsync(bool isTrackingChanges)
     {
-        if (!bookmarks.Any() || bookmarks is null)
+        var executionResult = await _repository.FindAllAsync(isTrackingChanges: false);
+
+        if (!executionResult.IsSuccess)
         {
-            return;
+            return executionResult;
         }
 
-        if (!merge)
-        {
-            ExistingBookmarks.AddRange(bookmarks);
-        }
-        if (merge)
-        {
-            foreach (Bookmark bookmark in bookmarks)
-            {
-                var existingbookmark =
-                ExistingBookmarks.Find(e => string.Equals(e.Url, bookmark.Url, StringComparison.OrdinalIgnoreCase));
+        IEnumerable<Bookmark>? bookmarks = executionResult.Value;
 
-                if (existingbookmark is not null)
-                {
-                    existingbookmark.Name = bookmark.Name;
-                }
-                else
-                {
-                    ExistingBookmarks.Add(bookmark);
-                }
-            }
+        if (bookmarks is null || !bookmarks.Any())
+        {
+            return ExecutionResult<IEnumerable<Bookmark>>.Failure("No bookmarks found.");
         }
 
-        PrintBookmarks();
+        return ExecutionResult<IEnumerable<Bookmark>>.Success(bookmarks);
+    }
+
+    public async Task<ExecutionResult<Bookmark>> GetBookmarkAsync(string bookmarkName)
+    {
+        var executionResult = await _repository.FindBookmarkByName(bookmarkName, isTrackingChanges: false);
+
+        if (!executionResult.IsSuccess)
+        {
+            return executionResult;
+        }
+
+        var bookmark = executionResult.Value;
+
+        if (bookmark is null)
+        {
+            return ExecutionResult<Bookmark>.Failure($"No bookmark found with name: {bookmarkName}");
+        }
+
+        return ExecutionResult<Bookmark>.Success(bookmark);
     }
 
     public async void ExportBookmarksAsync(IEnumerable<Bookmark> bookmarks, FileInfo outputFile, CancellationToken cancellationToken = default)
@@ -142,51 +140,79 @@ public class BookMarkService : IBookMarkService
         await File.WriteAllTextAsync(outputFile.FullName, json, cancellationToken);
     }
 
-    public void ExportBookmark(Bookmark bookmark, string outputFilePath, StreamWriter streamWriter)
+    public async Task<ExecutionResult<BookMarkConflictModel>> Import(Bookmark bookmark, bool merge)
     {
-        streamWriter.WriteLine(JsonSerializer.Serialize(bookmark));
-    }
+        // Check for existing bookmark
+        var executionResult = await _repository.FindBookmarkByUrl(bookmark.Url, isTrackingChanges: true);
 
-    public BookMarkConflictModel? Import(Bookmark bookmark, bool merge)
-    {
-        Bookmark? conflict = ExistingBookmarks.FirstOrDefault(b =>
-            b.Url == bookmark.Url && b.Name != bookmark.Name);
+        if (!executionResult.IsSuccess)
+        {
+            return executionResult.ToFailure<BookMarkConflictModel>();
+        }
 
-        if (conflict is not null && merge)
+        // IF present, update with argument bookmark
+        var existingBookmark = executionResult.Value;
+
+        if (existingBookmark is not null && merge)
         {
             var conflictModel = new BookMarkConflictModel
             {
-                OriginalName = conflict.Name,
+                OriginalName = existingBookmark.Name,
                 UpdatedName = bookmark.Name,
                 Url = bookmark.Url
             };
-            conflict.Name = bookmark.Name;
+            existingBookmark.Name = bookmark.Name;
 
-            return conflictModel;
+            return ExecutionResult<BookMarkConflictModel>.Success(conflictModel);
         }
         else
         {
-            ExistingBookmarks.Add(bookmark);
-            return null;
+            await _repository.AddAsync(bookmark);
+            return ExecutionResult<BookMarkConflictModel>.Success(null!);
         }
     }
 
-    public IEnumerable<Bookmark> GetBookmarksByCategory(string category)
+    public async Task<ExecutionResult<IEnumerable<Bookmark>>> GetBookmarksByCategory(string category)
     {
-        return ExistingBookmarks.Where(b => string.Equals(b.Category, category));
+        var executionResult = await _repository.FindBookmarksByCategory(category, isTrackingChanges: false);
+
+        if (!executionResult.IsSuccess)
+        {
+            return executionResult;
+        }
+
+        var bookmarks = executionResult.Value;
+
+        if (bookmarks is null || !bookmarks.Any())
+        {
+            return ExecutionResult<IEnumerable<Bookmark>>.Failure($"No bookmarks found with Category: {category}");
+        }
+
+        return ExecutionResult<IEnumerable<Bookmark>>.Success(bookmarks);
     }
 
-    public void ClearAll()
+    public async Task<ExecutionResult<bool>> PrintBookmarks()
     {
-        ExistingBookmarks.Clear();
-    }
+        var executionResult = await _repository.FindAllAsync(isTrackingChanges: false);
 
-    public void PrintBookmarks()
-    {
-        foreach (var bookmark in ExistingBookmarks)
+        if (!executionResult.IsSuccess)
+        {
+            return executionResult.ToFailure<bool>();
+        }
+
+        IEnumerable<Bookmark>? bookmarks = executionResult.Value;
+
+        if (bookmarks is null || !bookmarks.Any())
+        {
+            return ExecutionResult<bool>.Failure("No bookmarks found. Will not print bookmarks.");
+        }
+
+        foreach (var bookmark in bookmarks ?? Enumerable.Empty<Bookmark>())
         {
             Console.WriteLine(bookmark.ToString());
         }
+
+        return ExecutionResult<bool>.Success(true);
     }
 
 }

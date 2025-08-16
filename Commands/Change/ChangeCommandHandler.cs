@@ -37,7 +37,7 @@ public class ChangeCommandHandler
                 .AddChoices(categories)
             );
 
-            bool success = _bookmarkService.ChangeBookmarkCategory(url, selectedCategory);
+            bool success = _bookmarkService.ChangeBookmarkCategoryAsync(url, selectedCategory);
 
             if (success)
             {

@@ -1,5 +1,7 @@
 using Spectre.Console;
 using System.CommandLine;
+using System.IO;
+using System.Text.Json;
 
 namespace bookmarkr.Commands;
 
@@ -84,7 +86,7 @@ public class InteractiveCommandHandler
             {
                 foreach (Bookmark bookmark in bookmarks)
                 {
-                    _bookmarkService.ExportBookmark(bookmark, outputFilePath, writer);
+                    writer.WriteLine(JsonSerializer.Serialize(bookmark));
 
                     task.Increment(1);
 

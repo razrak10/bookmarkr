@@ -10,7 +10,7 @@ namespace bookmarkr.Persistence
     /// methods for querying and saving data. Configure the database connection and model relationships in the derived
     /// class or through the application's configuration.
     /// https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/ </remarks>
-    internal class BookmarkrDbContext : DbContext
+    public class BookmarkrDbContext : DbContext
     {
         public BookmarkrDbContext(DbContextOptions<BookmarkrDbContext> options)
             : base(options)

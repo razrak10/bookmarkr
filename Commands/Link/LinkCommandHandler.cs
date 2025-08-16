@@ -1,3 +1,5 @@
+using bookmarkr.Helpers;
+using bookmarkr.Logger;
 using System.CommandLine;
 
 namespace bookmarkr;
@@ -17,29 +19,23 @@ public class LinkCommandHandler
         return Task.FromResult(0);
     }
 
-    private static void OnHandleLinkCommand(BookMarkService bookMarkService)
+    private async static void OnHandleLinkCommand(BookMarkService bookMarkService)
     {
-        var bookmarks = bookMarkService.ExistingBookmarks;
+        var executionResult = await bookMarkService.GetBookmarksAsync(isTrackingChanges: false);
 
-        if (bookmarks is null || !bookmarks.Any())
+        if (!executionResult.IsSuccess)
         {
-            PrintConsoleMessage("Warning: no bookmarks currently present", ConsoleColor.Yellow);
-
+            LogManager.LogError(executionResult.Message, executionResult.Exception);
+            CommandHelper.ShowErrorMessage([$"No bookmarks currently present", $"{executionResult.Message}"]);
             return;
         }
 
-        for (int i = 0; i < bookmarks.Count; i++)
+        Bookmark[] bookmarks = executionResult.Value.ToArray();
+
+        for (int i = 0; i < bookmarks.Count(); i++)
         {
             Console.WriteLine($"# <name {i + 1}>");
-            Console.WriteLine($"<{bookMarkService.ExistingBookmarks[i].Url}>\n");
+            Console.WriteLine($"<{bookmarks[i].Url}>\n");
         }
-    }
-
-    private static void PrintConsoleMessage(string message, ConsoleColor color = ConsoleColor.White)
-    {
-        var prevColor = Console.ForegroundColor;
-        Console.ForegroundColor = color;
-        Console.WriteLine($"{message}");
-        Console.ForegroundColor = prevColor;
     }
 }
