@@ -1,15 +1,11 @@
-﻿
-using bookmarkr.ExecutionResult;
+﻿using bookmarkr.ExecutionResult;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using System.CommandLine;
 using System.Data.Common;
 using System.Linq.Expressions;
 
 namespace bookmarkr.Persistence
 {
-    internal class BookmarkRepository : IBookmarkRepository
+    public class BookmarkRepository : IBookmarkRepository
     {
         private readonly SemaphoreSlim _semaphore;
         private readonly BookmarkrDbContext _context;
@@ -26,34 +22,21 @@ namespace bookmarkr.Persistence
 
             try
             {
-                if (bookmark is not null)
-                {
-                    await _context.Bookmarks.AddAsync(bookmark);
-                    await _context.SaveChangesAsync();
-                    return ExecutionResult<Bookmark>.Success(bookmark);
-                }
-
-                return ExecutionResult<Bookmark>.Failure("Bookmark to add was null or empty.");
+                await _context.Bookmarks.AddAsync(bookmark);
+                await _context.SaveChangesAsync();
+                return ExecutionResult<Bookmark>.Success(bookmark);
             }
             catch (DbUpdateException ex)
             {
-                return ExecutionResult<Bookmark>.Failure("Error occured while adding bookmark to database.", ex);
+                return ExecutionResult<Bookmark>.Failure("Database Updater Error occured while adding bookmark to database.", ex);
             }
             catch (DbException ex)
             {
-                return ExecutionResult<Bookmark>.Failure("Database error occured.", ex);
+                return ExecutionResult<Bookmark>.Failure("Database error occured while adding bookmark to database.", ex);
             }
             catch (Exception ex)
             {
                 return ExecutionResult<Bookmark>.Failure("Error occurred while adding bookmark to database.", ex);
-            }
-            catch (DbException ex)
-            {
-                return ExecutionResult<Bookmark>.Failure("Database error occurred.", ex);
-            }
-            catch (Exception ex)
-            {
-                return ExecutionResult<Bookmark>.Failure("Unexpected error occurred.", ex);
             }
             finally
             {
@@ -66,28 +49,22 @@ namespace bookmarkr.Persistence
 
             try
             {
+                _context.Bookmarks.Remove(bookmarkToDelete);
+                await _context.SaveChangesAsync();
 
-                if (bookmarkToDelete != null)
-                {
-                    _context.Bookmarks.Remove(bookmarkToDelete);
-                    await _context.SaveChangesAsync();
-
-                    return ExecutionResult<Bookmark>.Success(bookmarkToDelete);
-                }
-
-                return ExecutionResult<Bookmark>.Failure("Bookmark to delete was null or empty.");
+                return ExecutionResult<Bookmark>.Success(bookmarkToDelete);
             }
             catch (DbUpdateException ex)
             {
-                return ExecutionResult<Bookmark>.Failure("Error occured while deleting bookmark from database.", ex);
+                return ExecutionResult<Bookmark>.Failure("Database Update Error occured while deleting bookmark from database.", ex);
             }
             catch (DbException ex)
             {
-                return ExecutionResult<Bookmark>.Failure("Database error occured.", ex);
+                return ExecutionResult<Bookmark>.Failure("Database error occured while deleting bookmark from database.", ex);
             }
             catch (Exception ex)
             {
-                return ExecutionResult<Bookmark>.Failure("Unexpected error occured.", ex);
+                return ExecutionResult<Bookmark>.Failure("Error occured while deleting bookmark from database.", ex);
             }
             finally
             {
@@ -95,65 +72,29 @@ namespace bookmarkr.Persistence
             }
         }
 
-        //public async Task<ExecutionResult<Bookmark>> DeleteAsync(Bookmark bookmarkToDelete)
-        //{
-        //    await _semaphore.WaitAsync();
-
-        //    try
-        //    {
-        //        ExecutionResult<IQueryable<Bookmark>> executionResult = await FindByConditionAsync<Bookmark>(e => e.Id == id);
-
-        //        if (!executionResult.IsSuccess)
-        //        {
-        //            return executionResult.ToFailure<Bookmark>();
-        //        }
-
-        //        Bookmark bookmarkToDelete = await executionResult.Value.SingleOrDefaultAsync();
-
-        //        if (bookmarkToDelete != null)
-        //        {
-        //            _context.Bookmarks.Remove(bookmarkToDelete);
-        //        }
-
-        //        await _context.SaveChangesAsync();
-
-        //        return ExecutionResult<Bookmark>.Failure($"More than 1 bookmarkToDelete found with {id}");
-        //    }
-        //    catch (DbUpdateException ex)
-        //    {
-        //        return ExecutionResult<Bookmark>.Failure("Error occured while deleting bookmarkToDelete from database.", ex);
-        //    }
-        //    catch (DbException ex)
-        //    {
-        //        return ExecutionResult<Bookmark>.Failure("Database error occured.", ex);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return ExecutionResult<Bookmark>.Failure("Unexpected error occured.", ex);
-        //    }
-        //    finally
-        //    {
-        //        _semaphore.Release();
-        //    }
-        //}
-
-        public async Task<ExecutionResult<IEnumerable<Bookmark>>> FindAllAsync()
+        public async Task<ExecutionResult<IEnumerable<Bookmark>>> FindAllAsync(bool isTrackingChanges)
         {
-            await _semaphore.WaitAsync();
             try
             {
-                IEnumerable<Bookmark> bookmarks = await _context.Bookmarks
-                    .AsNoTracking()
-                    .OrderBy(x => x.Id)
-                    .ThenBy(x => x.Name)
-                    .ToListAsync();
+                List<Bookmark> bookmarks;
 
-                if (bookmarks != null && bookmarks.Any())
+                if (isTrackingChanges)
                 {
-                    return ExecutionResult<IEnumerable<Bookmark>>.Success(bookmarks);
+                    bookmarks = await _context.Bookmarks
+                        .OrderBy(x => x.Id)
+                        .ThenBy(x => x.Name)
+                        .ToListAsync();
+                }
+                else
+                {
+                    bookmarks = await _context.Bookmarks
+                            .OrderBy(x => x.Id)
+                            .ThenBy(x => x.Name)
+                            .AsNoTracking()
+                            .ToListAsync();
                 }
 
-                return ExecutionResult<IEnumerable<Bookmark>>.Failure("No bookmarks retrieved from the bookmarks database.");
+                return ExecutionResult<IEnumerable<Bookmark>>.Success(bookmarks);
             }
             catch (DbException exception)
             {
@@ -162,39 +103,6 @@ namespace bookmarkr.Persistence
             catch (Exception exception)
             {
                 return ExecutionResult<IEnumerable<Bookmark>>.Failure("Unexpected error occured.", exception);
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
-
-        public async Task<ExecutionResult<IQueryable<T>>> FindByConditionAsync<T>(Expression<Func<T, bool>> expression) where T : class
-        {
-            await _semaphore.WaitAsync();
-
-            try
-            {
-                IQueryable<T> queryableResult = _context.Set<T>().Where(expression);
-
-                if (queryableResult is not null)
-                {
-                    return ExecutionResult<IQueryable<T>>.Success(queryableResult);
-                }
-
-                return ExecutionResult<IQueryable<T>>.Failure("No bookmarks found for the desired condition.");
-            }
-            catch (DbException ex)
-            {
-                return ExecutionResult<IQueryable<T>>.Failure("Database error occured.", ex);
-            }
-            catch (Exception ex)
-            {
-                return ExecutionResult<IQueryable<T>>.Failure("Unexpected error occured.", ex);
-            }
-            finally
-            {
-                _semaphore.Release();
             }
         }
 
@@ -228,51 +136,89 @@ namespace bookmarkr.Persistence
             }
         }
 
-        //public async Task<ExecutionResult<Bookmark>> UpdateAsync(Bookmark updatedBookmark)
-        //{
-        //    await _semaphore.WaitAsync();
+        public async Task<ExecutionResult<Bookmark>> FindBookmarkById(int id, bool isTrackingChanges)
+        {
+            ExecutionResult<IQueryable<Bookmark>> executionResult = FindByConditionAsync<Bookmark>(b => b.Id == id, isTrackingChanges);
 
-        //    try
-        //    {
-        //        ExecutionResult<IQueryable<Bookmark>> executionResult = await FindByConditionAsync<Bookmark>(b => b.Id == updatedBookmark.Id);
+            if (!executionResult.IsSuccess)
+            {
+                return executionResult.ToFailure<Bookmark>();
+            }
 
-        //        if (!executionResult.IsSuccess)
-        //        {
-        //            return executionResult.ToFailure<Bookmark>();
-        //        }
+            Bookmark bookmark = await executionResult.Value.SingleOrDefaultAsync();
 
-        //        Bookmark existingBookmark = await executionResult.Value.SingleOrDefaultAsync();
+            return ExecutionResult<Bookmark>.Success(bookmark);
+        }
 
-        //        if (existingBookmark is null)
-        //        {
-        //            return ExecutionResult<Bookmark>.Failure("More than 1 bookmarkToDelete found with the same id.");
-        //        }
+        public async Task<ExecutionResult<Bookmark>> FindBookmarkByName(string name, bool isTrackingChanges)
+        {
+            ExecutionResult<IQueryable<Bookmark>> executionResult = FindByConditionAsync<Bookmark>(b => string.Equals(b.Name, name, StringComparison.OrdinalIgnoreCase), isTrackingChanges);
 
-        //        existingBookmark.Name = updatedBookmark.Name;
-        //        existingBookmark.Category = updatedBookmark.Category;
-        //        existingBookmark.Url = updatedBookmark.Url;
-        //        existingBookmark.UpdatedAt = DateTime.UtcNow;
+            if (!executionResult.IsSuccess)
+            {
+                return executionResult.ToFailure<Bookmark>();
+            }
 
-        //        await _context.SaveChangesAsync();
+            Bookmark bookmark = await executionResult.Value.SingleOrDefaultAsync();
 
-        //        return ExecutionResult<Bookmark>.Success(existingBookmark);
-        //    }
-        //    catch (DbUpdateException ex)
-        //    {
-        //        return ExecutionResult<Bookmark>.Failure("Error occured while updating bookmarkToDelete with id: {}in database.", ex);
-        //    }
-        //    catch (DbException ex)
-        //    {
-        //        return ExecutionResult<Bookmark>.Failure("Database error occured.", ex);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return ExecutionResult<Bookmark>.Failure("Unexpected error occured.", ex);
-        //    }
-        //    finally
-        //    {
-        //        _semaphore.Release();
-        //    }
-        //}
+            return ExecutionResult<Bookmark>.Success(bookmark);
+        }
+
+        public async Task<ExecutionResult<Bookmark>> FindBookmarkByUrl(string url, bool isTrackingChanges)
+        {
+            ExecutionResult<IQueryable<Bookmark>> executionResult = FindByConditionAsync<Bookmark>(b => string.Equals(b.Url, url, StringComparison.OrdinalIgnoreCase), isTrackingChanges);
+
+            if (!executionResult.IsSuccess)
+            {
+                return executionResult.ToFailure<Bookmark>();
+            }
+
+            Bookmark bookmark = await executionResult.Value.SingleOrDefaultAsync();
+
+            return ExecutionResult<Bookmark>.Success(bookmark);
+        }
+
+        public async Task<ExecutionResult<IEnumerable<Bookmark>>> FindBookmarksByCategory(string category, bool isTrackingChanges)
+        {
+            ExecutionResult<IQueryable<Bookmark>> executionResult = FindByConditionAsync<Bookmark>(b =>
+            string.Equals(b.Category, category, StringComparison.OrdinalIgnoreCase), isTrackingChanges);
+
+            if (!executionResult.IsSuccess)
+            {
+                return executionResult.ToFailure<IEnumerable<Bookmark>>();
+            }
+
+            IEnumerable<Bookmark> bookmarks = await executionResult.Value.ToListAsync();
+
+            return ExecutionResult<IEnumerable<Bookmark>>.Success(bookmarks);
+        }
+
+        private ExecutionResult<IQueryable<T>> FindByConditionAsync<T>(
+            Expression<Func<T, bool>> expression,
+            bool isTrackingChanges) where T : class
+        {
+            try
+            {
+                IQueryable<T> queryableResult;
+                if (isTrackingChanges)
+                {
+                    queryableResult = _context.Set<T>().Where(expression);
+                }
+                else
+                {
+                    queryableResult = _context.Set<T>().Where(expression).AsNoTracking();
+                }
+
+                return ExecutionResult<IQueryable<T>>.Success(queryableResult);
+            }
+            catch (DbException ex)
+            {
+                return ExecutionResult<IQueryable<T>>.Failure("Database error occured.", ex);
+            }
+            catch (Exception ex)
+            {
+                return ExecutionResult<IQueryable<T>>.Failure("Unexpected error occured.", ex);
+            }
+        }
     }
 }

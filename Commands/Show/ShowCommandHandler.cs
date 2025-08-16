@@ -26,7 +26,7 @@ public class ShowCommandHandler
 
     private void OnLinkShowCommandHandle(string bookmarkName)
     {
-        Bookmark? foundBookmark = _bookmarkService.GetBookmark(bookmarkName);
+        Bookmark? foundBookmark = _bookmarkService.GetBookmarkAsync(bookmarkName);
 
         Table table = new Table();
         table.AddColumn("[bold]Name[/]");

@@ -1,5 +1,5 @@
 using bookmarkr.Helpers;
-using System;
+using bookmarkr.Logger;
 using System.CommandLine;
 
 namespace bookmarkr;
@@ -25,17 +25,25 @@ public class LinkAddCommandHandler
             return Task.FromResult(-1);
         }
 
-        OnHandleAddLinkCommand(_bookmarkService, names, urls, categories);
+        OnHandleAddLinkCommandAsync(_bookmarkService, names, urls, categories);
         return Task.FromResult(0);
     }
 
-    private static void OnHandleAddLinkCommand(
+    private async static void OnHandleAddLinkCommandAsync(
         BookMarkService bookmarkService, string[] names, string[] urls, string[] categories)
     {
         for (int i = 0; i < names.Length; i++)
         {
-            bookmarkService.AddLink(names[i], urls[i], categories[i]);
-            CommandHelper.ShowErrorMessage(["Bookmark updated successfully."]);
+            var executionResult = await bookmarkService.AddLinkAsync(names[i], urls[i], categories[i]);
+
+            if (!executionResult.IsSuccess)
+            {
+                LogManager.LogError(executionResult.Message, executionResult.Exception);
+                CommandHelper.ShowErrorMessage(["Error occured while attempting to add bookmark", $"{executionResult.Message}"]);
+                return;
+            }
+
+            CommandHelper.ShowSuccessMessage(["Bookmark updated successfully."]);
         }
 
         CommandHelper.ListAll(bookmarkService);

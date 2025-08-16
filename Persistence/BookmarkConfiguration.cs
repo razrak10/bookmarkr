@@ -27,7 +27,6 @@ namespace bookmarkr.Persistence
 
             builder.Property(b => b.Category)
                 .HasColumnName("Category")
-                .IsRequired()
                 .HasMaxLength(100);
 
             builder.Property(b => b.CreatedAt)
@@ -35,6 +34,15 @@ namespace bookmarkr.Persistence
 
             builder.Property(b => b.UpdatedAt)
                 .HasDefaultValueSql("datetime('now')");
+
+            // Add unique constraints
+            builder.HasIndex(b => b.Name)
+                .IsUnique()
+                .HasDatabaseName("IX_Bookmarks_Name_Unique");
+
+            builder.HasIndex(b => b.Url)
+                .IsUnique()
+                .HasDatabaseName("IX_Bookmarks_Url_Unique");
 
             // Seed initial data
             builder.HasData(
