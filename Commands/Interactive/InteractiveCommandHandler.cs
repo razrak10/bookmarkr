@@ -1,26 +1,27 @@
+using bookmarkr.Helpers;
+using bookmarkr.Logger;
 using Spectre.Console;
 using System.CommandLine;
-using System.IO;
 using System.Text.Json;
 
 namespace bookmarkr.Commands;
 
 public class InteractiveCommandHandler
 {
-    private readonly BookMarkService _bookmarkService;
+    private readonly BookmarkService _bookmarkService;
 
-    public InteractiveCommandHandler(BookMarkService bookmarkService)
+    public InteractiveCommandHandler(BookmarkService bookmarkService)
     {
         _bookmarkService = bookmarkService;
     }
 
-    public Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public async Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
-        OnInteractiveCommand();
-        return Task.FromResult(0);
+        await OnInteractiveCommand();
+        return 0;
     }
 
-    private void OnInteractiveCommand()
+    private async Task OnInteractiveCommand()
     {
         bool isRunning = true;
         while (isRunning)
@@ -46,7 +47,7 @@ public class InteractiveCommandHandler
                     ExportBookmarks();
                     break;
                 case "View Bookmarks":
-                    ViewBookmarks();
+                    await ViewBookmarks();
                     break;
                 default:
                     isRunning = false;
@@ -57,6 +58,8 @@ public class InteractiveCommandHandler
 
     private void ExportBookmarks()
     {
+        bool isSuccess = true;
+
         string outputFilePath = AnsiConsole.Prompt(
             new TextPrompt<string>("Please provide the output file name(default: 'bookmarks.json')")
             .DefaultValue("bookmarks2.json")
@@ -74,13 +77,32 @@ public class InteractiveCommandHandler
                 new RemainingTimeColumn(),
                 new SpinnerColumn()
             ])
-        .Start(ctx =>
+        .Start(async ctx =>
         {
-            List<Bookmark> bookmarks = _bookmarkService.GetAll().ToList();
+            ExecutionResult.ExecutionResult<IEnumerable<Bookmark>> result = await _bookmarkService.GetBookmarksAsync(false);
+
+            if (!result.IsSuccess)
+            {
+                string message = $"Error occured while exporting bookmarks. Error: {result.Message}";
+                LogManager.LogError(message, result.Exception);
+                MessageHelper.ShowErrorMessage([message]);
+                isSuccess = false;
+                return;
+            }
+
+            IEnumerable<Bookmark>? bookmarks = result.Value!;
+            if (!bookmarks.Any())
+            {
+                string message = "No bookmarks currently present.";
+                LogManager.LogInformation(message);
+                MessageHelper.ShowWarningMessage([message]);
+                isSuccess = false;
+                return;
+            }
 
             ProgressTask task = ctx.AddTask("[yellow]exporting all bookmarks to file...[/]");
 
-            task.MaxValue = bookmarks.Count;
+            task.MaxValue = bookmarks!.Count();
 
             using (StreamWriter writer = new StreamWriter(outputFilePath))
             {
@@ -91,14 +113,18 @@ public class InteractiveCommandHandler
                     task.Increment(1);
 
                     // Slow down process
-                    Thread.Sleep(1000);
+                    Thread.Sleep(250);
                 }
             }
         });
-        AnsiConsole.MarkupLine("[green]All bookmarks have been successfully exported[/]");
+
+        if (isSuccess)
+        {
+            MessageHelper.ShowSuccessMessage(["All bookmarks have been successfully exported"]);
+        }
     }
 
-    public void ViewBookmarks()
+    public async Task ViewBookmarks()
     {
         // Create tree
         Tree root = new Tree("Bookmarks");
@@ -110,26 +136,59 @@ public class InteractiveCommandHandler
         TreeNode cookingCategory = root.AddNode("[yellow]Cooking[/]");
 
         // Add bookmarks for the Tech category
-        var techBooks = _bookmarkService.GetBookmarksByCategory("Tech");
-        foreach (Bookmark techBookmark in techBooks)
+        ExecutionResult.ExecutionResult<IEnumerable<Bookmark>> techResult = await _bookmarkService.GetBookmarksByCategory("Tech");
+
+        if (!techResult.IsSuccess)
+        {
+            string message = $"Error occured while retrieving categoy 'Tech'. Error: {techResult.Message}";
+            LogManager.LogError(message, techResult.Exception);
+            MessageHelper.ShowErrorMessage([message]);
+            return;
+        }
+        IEnumerable<Bookmark>? techBooks = techResult.Value;
+        foreach (Bookmark techBookmark in techBooks!)
         {
             techBooksCategory.AddNode($"{techBookmark.Name} | {techBookmark.Url}");
         }
 
-        var carsBooks = _bookmarkService.GetBookmarksByCategory("Cars");
-        foreach (Bookmark carBook in carsBooks)
+        ExecutionResult.ExecutionResult<IEnumerable<Bookmark>> carsResult = await _bookmarkService.GetBookmarksByCategory("Cars");
+        if (!carsResult.IsSuccess)
+        {
+            string message = $"Error occured while retrieving categoy 'Cars'. Error: {carsResult.Message}";
+            LogManager.LogError(message, carsResult.Exception);
+            MessageHelper.ShowErrorMessage([message]);
+            return;
+        }
+        IEnumerable<Bookmark>? carsBooks = carsResult.Value;
+        foreach (Bookmark carBook in carsBooks!)
         {
             carsCategory.AddNode($"{carBook.Name} | {carBook.Url}");
         }
 
-        var socialMediaBooks = _bookmarkService.GetBookmarksByCategory("SocialMedia");
-        foreach (Bookmark socialMediaBook in socialMediaBooks)
+        ExecutionResult.ExecutionResult<IEnumerable<Bookmark>> socialResult = await _bookmarkService.GetBookmarksByCategory("SocialMedia");
+        if (!socialResult.IsSuccess)
+        {
+            string message = $"Error occured while retrieving categoy 'SocialMedia'. Error: {socialResult.Message}";
+            LogManager.LogError(message, socialResult.Exception);
+            MessageHelper.ShowErrorMessage([message]);
+            return;
+        }
+        IEnumerable<Bookmark>? socialBooks = socialResult.Value;
+        foreach (Bookmark socialMediaBook in socialBooks!)
         {
             socialMediaCategory.AddNode($"{socialMediaBook.Name} | {socialMediaBook.Url}");
         }
 
-        var cookingBooks = _bookmarkService.GetBookmarksByCategory("Cooking");
-        foreach (Bookmark cookingBook in cookingBooks)
+        ExecutionResult.ExecutionResult<IEnumerable<Bookmark>> cookResult = await _bookmarkService.GetBookmarksByCategory("Cooking");
+        if (!cookResult.IsSuccess)
+        {
+            string message = $"Error occured while retrieving categoy 'Cooking'. Error: {cookResult.Message}";
+            LogManager.LogError(message, cookResult.Exception);
+            MessageHelper.ShowErrorMessage([message]);
+            return;
+        }
+        IEnumerable<Bookmark>? cookBooks = cookResult.Value;
+        foreach (Bookmark cookingBook in cookBooks!)
         {
             cookingCategory.AddNode($"{cookingBook.Name} | {cookingBook.Url}");
         }

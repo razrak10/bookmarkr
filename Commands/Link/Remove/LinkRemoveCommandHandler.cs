@@ -1,39 +1,52 @@
+using bookmarkr.ExecutionResult;
 using bookmarkr.Helpers;
+using bookmarkr.Logger;
 using System.CommandLine;
 
 namespace bookmarkr;
 
 public class LinkRemoveCommandHandler
 {
-    private readonly BookMarkService _bookmarkService;
+    private readonly BookmarkService _bookmarkService;
 
-    public LinkRemoveCommandHandler(BookMarkService bookMarkService)
+    public LinkRemoveCommandHandler(BookmarkService bookMarkService)
     {
         _bookmarkService = bookMarkService;
     }
 
-    public Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public async Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
-        var name = parseResult.GetValue<string>("name");
+        string? name = parseResult.GetValue<string>("name");
 
         if (name is not null && !string.IsNullOrWhiteSpace(name))
         {
-            OnHandleRemoveCommand(_bookmarkService, name);
-            return Task.FromResult(0);
+            await OnHandleRemoveCommand(name);
+            return 0;
         }
 
-        return Task.FromResult(-1);
+        return -1;
     }
 
-    private static void OnHandleRemoveCommand(BookMarkService bookMarkService, string name)
+    private async Task OnHandleRemoveCommand(string name)
     {
-        var prevColor = Console.ForegroundColor;
+        ConsoleColor prevColor = Console.ForegroundColor;
 
-        var bookmarks = bookMarkService.ExistingBookmarks;
-        if (bookmarks is null || !bookmarks.Any())
+        ExecutionResult<IEnumerable<Bookmark>> result = await _bookmarkService.GetBookmarksAsync(false);
+
+        if (!result.IsSuccess)
         {
-            CommandHelper.ShowWarningMessage(["Warning: no bookmarks currently present."]);
+            string message = $"Error occured while retrieving bookmarks. Error: {result.Message}";
+            LogManager.LogError(message, result.Exception);
+            MessageHelper.ShowErrorMessage([message]);
+            return;
+        }
 
+        List<Bookmark>? bookmarks = result.Value!.ToList();
+        if (!bookmarks.Any())
+        {
+            string message = "No bookmarks currently present.";
+            LogManager.LogInformation(message);
+            MessageHelper.ShowWarningMessage([message]);
             return;
         }
 
@@ -41,14 +54,13 @@ public class LinkRemoveCommandHandler
 
         if (foundBookmark is null)
         {
-            CommandHelper.ShowWarningMessage(["Bookmark does not exist."]);
-
+            MessageHelper.ShowWarningMessage(["Bookmark does not exist."]);
             return;
         }
 
         bookmarks.Remove(foundBookmark);
 
-        CommandHelper.ShowSuccessMessage(["Bookmark removed successfully."]);
-        CommandHelper.ListAll(bookMarkService);
+        MessageHelper.ShowSuccessMessage(["Bookmark removed successfully."]);
+        await MessageHelper.ListAll(_bookmarkService);
     }
 }
