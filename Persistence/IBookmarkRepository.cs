@@ -1,5 +1,4 @@
 ﻿using bookmarkr.ExecutionResult;
-using System.Linq.Expressions;
 
 namespace bookmarkr.Persistence
 {
@@ -7,8 +6,10 @@ namespace bookmarkr.Persistence
     {
         Task<ExecutionResult<Bookmark>> AddAsync(Bookmark bookmark);
         Task<ExecutionResult<Bookmark>> DeleteAsync(Bookmark bookmarkToDelete);
-        Task<ExecutionResult<IEnumerable<Bookmark>>> FindAllAsync();
-        Task<ExecutionResult<IQueryable<T>>> FindByConditionAsync<T>(Expression<Func<T, bool>> expression) where T : class;
+        Task<ExecutionResult<IEnumerable<Bookmark>>> FindAllAsync(bool isTrackingChanges);
+        Task<ExecutionResult<Bookmark>> FindBookmarkById(int id, bool isTrackingChanges);
+        Task<ExecutionResult<Bookmark>> FindBookmarkByName(string name, bool isTrackingChanges);
+        Task<ExecutionResult<Bookmark>> FindBookmarkByUrl(string url, bool isTrackingChanges);
         Task<ExecutionResult<Bookmark>> UpdateAsync(Bookmark updatedBookmark);
     }
 }
