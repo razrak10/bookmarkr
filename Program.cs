@@ -37,8 +37,8 @@ class Program
 
                  // Register Repository
 
-                 // Register BookMarkService
-                 services.AddSingleton<BookMarkService>();
+                 // Register BookmarkService
+                 services.AddSingleton<BookmarkService>();
 
                  // Register HttpClient
                  services.AddHttpClient();

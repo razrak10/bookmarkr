@@ -6,11 +6,11 @@ using System.Text.Json;
 
 namespace bookmarkr;
 
-public class BookMarkService : IBookMarkService
+public class BookmarkService : IBookMarkService
 {
     private readonly BookmarkRepository _repository;
 
-    public BookMarkService(BookmarkRepository repository)
+    public BookmarkService(BookmarkRepository repository)
     {
         _repository = repository;
     }
@@ -107,9 +107,9 @@ public class BookMarkService : IBookMarkService
 
         IEnumerable<Bookmark>? bookmarks = executionResult.Value;
 
-        if (bookmarks is null || !bookmarks.Any())
+        if (bookmarks is null)
         {
-            return ExecutionResult<IEnumerable<Bookmark>>.Failure("No bookmarks found.");
+            return ExecutionResult<IEnumerable<Bookmark>>.Failure("Retrieved bookmarks cannot be null.");
         }
 
         return ExecutionResult<IEnumerable<Bookmark>>.Success(bookmarks);
@@ -168,7 +168,7 @@ public class BookMarkService : IBookMarkService
         else
         {
             await _repository.AddAsync(bookmark);
-            return ExecutionResult<BookMarkConflictModel>.Success(null!);
+            return ExecutionResult<BookMarkConflictModel>.Success(null);
         }
     }
 
@@ -214,5 +214,4 @@ public class BookMarkService : IBookMarkService
 
         return ExecutionResult<bool>.Success(true);
     }
-
 }

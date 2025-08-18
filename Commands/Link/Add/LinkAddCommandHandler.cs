@@ -6,9 +6,9 @@ namespace bookmarkr;
 
 public class LinkAddCommandHandler
 {
-    private readonly BookMarkService _bookmarkService;
+    private readonly BookmarkService _bookmarkService;
 
-    public LinkAddCommandHandler(BookMarkService service)
+    public LinkAddCommandHandler(BookmarkService service)
     {
         _bookmarkService = service;
     }
@@ -21,7 +21,7 @@ public class LinkAddCommandHandler
 
         if (names is null || urls is null || categories is null)
         {
-            CommandHelper.ShowErrorMessage(["Provided bookmark name, urls or categories is null"]);
+            MessageHelper.ShowErrorMessage(["Provided bookmark name, urls or categories is null"]);
             return Task.FromResult(-1);
         }
 
@@ -30,7 +30,7 @@ public class LinkAddCommandHandler
     }
 
     private async static void OnHandleAddLinkCommandAsync(
-        BookMarkService bookmarkService, string[] names, string[] urls, string[] categories)
+        BookmarkService bookmarkService, string[] names, string[] urls, string[] categories)
     {
         for (int i = 0; i < names.Length; i++)
         {
@@ -38,14 +38,14 @@ public class LinkAddCommandHandler
 
             if (!executionResult.IsSuccess)
             {
-                LogManager.LogError(executionResult.Message, executionResult.Exception);
-                CommandHelper.ShowErrorMessage(["Error occured while attempting to add bookmark", $"{executionResult.Message}"]);
+                LogManager.LogError(executionResult.Message!, executionResult.Exception);
+                MessageHelper.ShowErrorMessage(["Error occured while attempting to add bookmark", $"{executionResult.Message}"]);
                 return;
             }
 
-            CommandHelper.ShowSuccessMessage(["Bookmark updated successfully."]);
+            MessageHelper.ShowSuccessMessage(["Bookmarks added successfully."]);
         }
 
-        CommandHelper.ListAll(bookmarkService);
+        await MessageHelper.ListAll(bookmarkService);
     }
 }

@@ -6,36 +6,46 @@ namespace bookmarkr;
 
 public class LinkCommandHandler
 {
-    private readonly BookMarkService _bookmarkService;
+    private readonly BookmarkService _bookmarkService;
 
-    public LinkCommandHandler(BookMarkService service)
+    public LinkCommandHandler(BookmarkService service)
     {
         _bookmarkService = service;
     }
 
-    public Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public async Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
-        OnHandleLinkCommand(_bookmarkService);
-        return Task.FromResult(0);
+        await OnHandleLinkCommand();
+        return 0;
     }
 
-    private async static void OnHandleLinkCommand(BookMarkService bookMarkService)
+    private async Task OnHandleLinkCommand()
     {
-        var executionResult = await bookMarkService.GetBookmarksAsync(isTrackingChanges: false);
+        ExecutionResult.ExecutionResult<IEnumerable<Bookmark>> executionResult = await _bookmarkService.GetBookmarksAsync(isTrackingChanges: false);
 
         if (!executionResult.IsSuccess)
         {
-            LogManager.LogError(executionResult.Message, executionResult.Exception);
-            CommandHelper.ShowErrorMessage([$"No bookmarks currently present", $"{executionResult.Message}"]);
+            string message = $"Error occured when retrieving bookmarks. Error: {executionResult.Message}";
+            LogManager.LogError(message, executionResult.Exception);
+            MessageHelper.ShowErrorMessage([message]);
             return;
         }
 
-        Bookmark[] bookmarks = executionResult.Value.ToArray();
+        IEnumerable<Bookmark> bookmarks = executionResult.Value!;
+        if (!bookmarks.Any())
+        {
+            string message = "No bookmarks currently present.";
+            LogManager.LogInformation(message);
+            MessageHelper.ShowWarningMessage([message]);
+            return;
+        }
+
+        Bookmark[] bookmarksArray = bookmarks.ToArray();
 
         for (int i = 0; i < bookmarks.Count(); i++)
         {
             Console.WriteLine($"# <name {i + 1}>");
-            Console.WriteLine($"<{bookmarks[i].Url}>\n");
+            Console.WriteLine($"<{bookmarksArray[i].Url}>\n");
         }
     }
 }

@@ -1,33 +1,44 @@
 using System;
 using System.CommandLine;
+using bookmarkr.Helpers;
+using bookmarkr.Logger;
 using Spectre.Console;
 
 namespace bookmarkr.Commands;
 
 public class ChangeCommandHandler
 {
-    private readonly BookMarkService _bookmarkService;
+    private readonly BookmarkService _bookmarkService;
 
-    public ChangeCommandHandler(BookMarkService bookMarkService)
+    public ChangeCommandHandler(BookmarkService bookMarkService)
     {
         _bookmarkService = bookMarkService;
     }
 
-    public Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public  async Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         var url = parseResult.GetValue<string>("forUrl");
         if (!string.IsNullOrWhiteSpace(url))
         {
-            OnChangeCommmandHandle(url);
-            return Task.FromResult(0);
+            await OnChangeCommmandHandle(url);
+            return 0;
         }
-        return Task.FromResult(-1);
+        return -1;
     }
 
-    private void OnChangeCommmandHandle(string url)
+    private async Task OnChangeCommmandHandle(string url)
     {
         bool isRunning = true;
-        IEnumerable<string> categories = _bookmarkService.GetCategories();
+
+        var result = await _bookmarkService.GetExistingCategoriesAsync();
+
+        if (!result.IsSuccess)
+        {
+            LogManager.LogError($"Error occured while retrieving categories. Error: {result.Message}", result.Exception);
+            MessageHelper.ShowErrorMessage([$"Error occured whule retrieving categories.", $"{result.Message}"]);
+        }
+
+        IEnumerable<string> categories = result.Value!;
 
         while (isRunning)
         {
@@ -37,11 +48,18 @@ public class ChangeCommandHandler
                 .AddChoices(categories)
             );
 
-            bool success = _bookmarkService.ChangeBookmarkCategoryAsync(url, selectedCategory);
+            var changeResult = await _bookmarkService.ChangeBookmarkCategoryAsync(url, selectedCategory);
 
-            if (success)
+            if (!result.IsSuccess)
             {
-                AnsiConsole.MarkupLine($"[green]Bookmark category changed successfully. Selected category: '{selectedCategory}'[/]");
+                LogManager.LogError($"Error occured while changing category. Error: {result.Message}", result.Exception);
+                MessageHelper.ShowErrorMessage([$"Error occured while changing category.", $"{result.Message}"]);
+                return;
+            }
+
+            if (changeResult.Value)
+            {
+                MessageHelper.ShowSuccessMessage([$"Bookmark category changed successfully. Selected category: '{selectedCategory}'"]);
                 break;
             }
         }

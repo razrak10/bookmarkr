@@ -1,19 +1,19 @@
 using bookmarkr.Helpers;
-using System;
+using bookmarkr.Logger;
 using System.CommandLine;
 
 namespace bookmarkr;
 
 public class LinkUpdateCommandHandler
 {
-    private readonly BookMarkService _bookmarkService;
+    private readonly BookmarkService _bookmarkService;
 
-    public LinkUpdateCommandHandler(BookMarkService bookMarkService)
+    public LinkUpdateCommandHandler(BookmarkService bookMarkService)
     {
         _bookmarkService = bookMarkService;
     }
 
-    public Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public async Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         var name = parseResult.GetValue<string>("name");
         var url = parseResult.GetValue<string>("url");
@@ -23,19 +23,29 @@ public class LinkUpdateCommandHandler
             && url is not null
             && !string.IsNullOrWhiteSpace(url))
         {
-            OnHandleUpdateCommand(_bookmarkService, name, url);
+            await OnHandleUpdateCommand(_bookmarkService, name, url);
         }
 
-        return Task.FromResult(0);
+        return 0;
     }
 
-    private static void OnHandleUpdateCommand(BookMarkService bookMarkService, string name, string url)
+    private async Task OnHandleUpdateCommand(BookmarkService bookMarkService, string name, string url)
     {
-        var bookmarks = bookMarkService.ExistingBookmarks;
-        if (bookmarks is null || !bookmarks.Any())
-        {
-            CommandHelper.ShowWarningMessage(["No bookmarks currently present."]);
+        var result = await _bookmarkService.GetBookmarksAsync(false);
 
+        if (!result.IsSuccess)
+        {
+            string message = $"Error occured while retrieving bookmarks: {result.Message}.";
+            LogManager.LogError(message, result.Exception);
+            MessageHelper.ShowErrorMessage([message]);
+            return;
+        }
+
+        List<Bookmark> bookmarks = result.Value!.ToList();
+
+        if (!bookmarks.Any())
+        {
+            MessageHelper.ShowWarningMessage(["No bookmarks currently present."]);
             return;
         }
 
@@ -43,14 +53,13 @@ public class LinkUpdateCommandHandler
 
         if (foundBookmark is null)
         {
-            CommandHelper.ShowWarningMessage(["Bookmark does not exist. Use the `link add` command to add a new bookmark."]);
-
+            MessageHelper.ShowWarningMessage(["Bookmark does not exist. Use the `link add` command to add a new bookmark."]);
             return;
         }
 
         foundBookmark.Url = url;
 
-        CommandHelper.ShowSuccessMessage(["Bookmark updated successfully."]);
-        CommandHelper.ListAll(bookMarkService);
+        MessageHelper.ShowSuccessMessage(["Bookmark updated successfully."]);
+        await MessageHelper.ListAll(bookMarkService);
     }
 }
