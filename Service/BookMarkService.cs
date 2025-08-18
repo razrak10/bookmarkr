@@ -168,7 +168,7 @@ public class BookmarkService : IBookMarkService
         else
         {
             await _repository.AddAsync(bookmark);
-            return ExecutionResult<BookMarkConflictModel>.Success(new BookMarkConflictModel());
+            return ExecutionResult<BookMarkConflictModel>.Success(null);
         }
     }
 
