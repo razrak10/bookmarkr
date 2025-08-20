@@ -1,5 +1,6 @@
 using bookmarkr.Helpers;
 using bookmarkr.Logger;
+using bookmarkr.Service;
 using System.CommandLine;
 using System.Text.Json;
 
@@ -7,9 +8,9 @@ namespace bookmarkr.Commands;
 
 public class ExportCommandHandler
 {
-    private readonly BookmarkService _bookmarkService;
+    private readonly IBookmarkService _bookmarkService;
 
-    public ExportCommandHandler(BookmarkService bookMarkService)
+    public ExportCommandHandler(IBookmarkService bookMarkService)
     {
         _bookmarkService = bookMarkService;
     }

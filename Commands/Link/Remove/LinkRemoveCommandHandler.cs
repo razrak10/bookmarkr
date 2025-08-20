@@ -1,17 +1,18 @@
 using bookmarkr.ExecutionResult;
 using bookmarkr.Helpers;
 using bookmarkr.Logger;
+using bookmarkr.Service;
 using System.CommandLine;
 
 namespace bookmarkr;
 
 public class LinkRemoveCommandHandler
 {
-    private readonly BookmarkService _bookmarkService;
+    private readonly IBookmarkService _bookmarkService;
 
-    public LinkRemoveCommandHandler(BookmarkService bookMarkService)
+    public LinkRemoveCommandHandler(IBookmarkService bookmarkService)
     {
-        _bookmarkService = bookMarkService;
+        _bookmarkService = bookmarkService;
     }
 
     public async Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
@@ -58,7 +59,14 @@ public class LinkRemoveCommandHandler
             return;
         }
 
-        bookmarks.Remove(foundBookmark);
+        var removeResult = await _bookmarkService.RemoveLinkAsync(foundBookmark.Name);
+
+        if (!removeResult.IsSuccess)
+        {
+            LogManager.LogError(removeResult.Message!, removeResult.Exception);
+            MessageHelper.ShowErrorMessage(["Error occured while attempting to remove bookmark", $"{removeResult.Message}"]);
+            return;
+        }
 
         MessageHelper.ShowSuccessMessage(["Bookmark removed successfully."]);
         await MessageHelper.ListAll(_bookmarkService);

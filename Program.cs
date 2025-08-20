@@ -10,6 +10,7 @@ using bookmarkr.Commands.Link.Update;
 using bookmarkr.Commands.Show;
 using bookmarkr.Commands.Sync;
 using bookmarkr.Persistence;
+using bookmarkr.Service;
 using bookmarkr.ServiceAgent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -35,10 +36,10 @@ class Program
                  // Add Entity Framework
                  services.AddDbContext<BookmarkrDbContext>(options => options.UseSqlite("Data Source=bookmarks.db"));
 
-                 // Register Repository
+                 services.AddScoped<IBookmarkRepository, BookmarkRepository>();
 
                  // Register BookmarkService
-                 services.AddSingleton<BookmarkService>();
+                 services.AddScoped<IBookmarkService, BookmarkService>();
 
                  // Register HttpClient
                  services.AddHttpClient();
@@ -65,10 +66,13 @@ class Program
 
                  // Register service agent
                  services.AddScoped<IBookmarkrSyncrServiceAgent, BookmarkrSyncrServiceAgent>();
+                 services.AddScoped<IBookmarkrLookupServiceAgent, BookmarkrLookupServiceAgent>();
              })
              .Build();
 
         _host = host;
+
+        await EnsureDatabaseAsync();
 
         RootCommand rootCommand = new RootCommand("Bookmarkr is a bookmark manager provided as a CLI application");
 
@@ -159,6 +163,20 @@ class Program
         Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)
             .CreateLogger();
+    }
+
+    /// <summary>
+    /// Ensures that the database is created and applies any pending migrations asynchronously.
+    /// </summary>
+    /// <remarks>This method creates a new service scope to resolve the database context and applies 
+    /// migrations to bring the database schema up to date. It should be called during application  startup to ensure
+    /// the database is ready for use.</remarks>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private static async Task EnsureDatabaseAsync()
+    {
+        using var scope = _host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<BookmarkrDbContext>();
+        await context.Database.MigrateAsync();
     }
 
     private static void FreeSerilogLoggerOnShutdown()

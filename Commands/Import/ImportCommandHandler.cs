@@ -1,18 +1,16 @@
-using System;
-using System.CommandLine;
-using System.Text.Json;
 using bookmarkr.Helpers;
 using bookmarkr.Logger;
-using bookmarkr.Models;
-using Serilog;
+using bookmarkr.Service;
+using System.CommandLine;
+using System.Text.Json;
 
 namespace bookmarkr;
 
 public class ImportCommandHandler
 {
-    private readonly BookmarkService _bookmarkService;
+    private readonly IBookmarkService _bookmarkService;
 
-    public ImportCommandHandler(BookmarkService bookmarkService)
+    public ImportCommandHandler(IBookmarkService bookmarkService)
     {
         _bookmarkService = bookmarkService;
     }
@@ -88,10 +86,10 @@ public class ImportCommandHandler
                 importSuccessful = false;
             }
 
-            BookMarkConflictModel? conflictBookmark = result.Value;
-            if (conflictBookmark is not null)
+            Bookmark? addedBookmark = result.Value;
+            if (addedBookmark is not null && merge)
             {
-                LogManager.LogInformation($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | Bookmark updated | name changed from '{conflictBookmark.OriginalName}' to '{conflictBookmark.UpdatedName}' for URL '{conflictBookmark.Url}'");
+                LogManager.LogInformation($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | Bookmark updated | name changed to '{addedBookmark.Name}' for URL '{addedBookmark.Url}'");
             }
         }
 

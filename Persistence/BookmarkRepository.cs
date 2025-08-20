@@ -145,35 +145,35 @@ namespace bookmarkr.Persistence
                 return executionResult.ToFailure<Bookmark>();
             }
 
-            Bookmark bookmark = await executionResult.Value.SingleOrDefaultAsync();
+            Bookmark? bookmark = await executionResult.Value!.SingleOrDefaultAsync();
 
             return ExecutionResult<Bookmark>.Success(bookmark);
         }
 
         public async Task<ExecutionResult<Bookmark>> FindBookmarkByName(string name, bool isTrackingChanges)
         {
-            ExecutionResult<IQueryable<Bookmark>> executionResult = FindByConditionAsync<Bookmark>(b => string.Equals(b.Name, name, StringComparison.OrdinalIgnoreCase), isTrackingChanges);
+            ExecutionResult<IQueryable<Bookmark>> executionResult = FindByConditionAsync<Bookmark>(b => b.Name.ToLower() == name.ToLower(), isTrackingChanges);
 
             if (!executionResult.IsSuccess)
             {
                 return executionResult.ToFailure<Bookmark>();
             }
 
-            Bookmark bookmark = await executionResult.Value.SingleOrDefaultAsync();
+            Bookmark? bookmark = await executionResult.Value.SingleOrDefaultAsync();
 
             return ExecutionResult<Bookmark>.Success(bookmark);
         }
 
         public async Task<ExecutionResult<Bookmark>> FindBookmarkByUrl(string url, bool isTrackingChanges)
         {
-            ExecutionResult<IQueryable<Bookmark>> executionResult = FindByConditionAsync<Bookmark>(b => string.Equals(b.Url, url, StringComparison.OrdinalIgnoreCase), isTrackingChanges);
+            ExecutionResult<IQueryable<Bookmark>> executionResult = FindByConditionAsync<Bookmark>(b => b.Url.ToLower() == url.ToLower(), isTrackingChanges);
 
             if (!executionResult.IsSuccess)
             {
                 return executionResult.ToFailure<Bookmark>();
             }
 
-            Bookmark bookmark = await executionResult.Value.SingleOrDefaultAsync();
+            Bookmark? bookmark = await executionResult.Value.SingleOrDefaultAsync();
 
             return ExecutionResult<Bookmark>.Success(bookmark);
         }
@@ -181,7 +181,7 @@ namespace bookmarkr.Persistence
         public async Task<ExecutionResult<IEnumerable<Bookmark>>> FindBookmarksByCategory(string category, bool isTrackingChanges)
         {
             ExecutionResult<IQueryable<Bookmark>> executionResult = FindByConditionAsync<Bookmark>(b =>
-            string.Equals(b.Category, category, StringComparison.OrdinalIgnoreCase), isTrackingChanges);
+            string.Equals(b.Category, category), isTrackingChanges);
 
             if (!executionResult.IsSuccess)
             {
@@ -219,6 +219,11 @@ namespace bookmarkr.Persistence
             {
                 return ExecutionResult<IQueryable<T>>.Failure("Unexpected error occured.", ex);
             }
+        }
+
+        public async Task<int> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync();
         }
     }
 }

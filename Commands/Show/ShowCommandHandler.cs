@@ -1,14 +1,15 @@
 using bookmarkr.Helpers;
 using bookmarkr.Logger;
+using bookmarkr.Service;
 using Spectre.Console;
 using System.CommandLine;
 
 namespace bookmarkr.Commands.Show;
 public class ShowCommandHandler
 {
-    private readonly BookmarkService _bookmarkService;
+    private readonly IBookmarkService _bookmarkService;
 
-    public ShowCommandHandler(BookmarkService bookMarkService)
+    public ShowCommandHandler(IBookmarkService bookMarkService)
     {
         _bookmarkService = bookMarkService;
     }

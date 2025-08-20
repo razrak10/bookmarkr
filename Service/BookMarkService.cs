@@ -2,21 +2,26 @@ using bookmarkr.ExecutionResult;
 using bookmarkr.Models;
 using bookmarkr.Persistence;
 using bookmarkr.Service;
+using bookmarkr.ServiceAgent;
 using System.Text.Json;
 
 namespace bookmarkr;
 
-public class BookmarkService : IBookMarkService
+public class BookmarkService : IBookmarkService
 {
-    private readonly BookmarkRepository _repository;
+    private readonly IBookmarkRepository _repository;
+    private readonly IBookmarkrLookupServiceAgent _lookupServiceAgent;
 
-    public BookmarkService(BookmarkRepository repository)
+    public BookmarkService(IBookmarkRepository repository, IBookmarkrLookupServiceAgent serviceAgent)
     {
         _repository = repository;
+        _lookupServiceAgent = serviceAgent;
     }
 
     public async Task<ExecutionResult<bool>> AddLinkAsync(string name, string url, string category)
     {
+        string bookmarkName = string.Empty;
+
         if (string.IsNullOrWhiteSpace(name))
         {
             return ExecutionResult<bool>.Failure("the `name` for the link is not provided. The expected sytnax is:\", \"bookmarkr link add <name> <url>");
@@ -27,25 +32,70 @@ public class BookmarkService : IBookMarkService
             return ExecutionResult<bool>.Failure("the `url` for the link is not provided. The expected sytnax is:\", \"bookmarkr link add <name> <url>");
         }
 
-        var findExecutionResult = await _repository.FindBookmarkByName(name, false);
+        var nameResult = await GetBookmarkNameFromUrlAsync(name, url);
+
+        if (!nameResult.IsSuccess)
+        {
+            bookmarkName = "Unnamed bookmark";
+        }
+        else if (nameResult.IsSuccess && string.Equals(nameResult.Value, name))
+        {
+
+            bookmarkName = name;
+        }
+        else
+        {
+            bookmarkName = nameResult.Value!;
+        }
+
+        ExecutionResult<Bookmark> addResult = await _repository.AddAsync(new Bookmark
+        {
+            Name = bookmarkName,
+            Url = url,
+            Category = category
+        });
+
+        if (!addResult.IsSuccess)
+        {
+            return addResult.ToFailure<bool>();
+        }
+
+        return ExecutionResult<bool>.Success(true);
+    }
+
+    private async Task<ExecutionResult<string>> GetBookmarkNameFromUrlAsync(string name, string url)
+    {
+        var lookupResult = await _lookupServiceAgent.GetBookmarkTitle(name, url);
+
+        return lookupResult;
+    }
+
+    public async Task<ExecutionResult<bool>> RemoveLinkAsync(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return ExecutionResult<bool>.Failure("the `name` for the link is not provided. The expected sytnax is:\", \"bookmarkr link add <name> <url>");
+        }
+
+        ExecutionResult<Bookmark> findExecutionResult = await _repository.FindBookmarkByName(name, false);
         if (!findExecutionResult.IsSuccess)
         {
             return findExecutionResult.ToFailure<bool>();
         }
 
-        Bookmark existingBookmark = findExecutionResult.Value;
+        Bookmark existingBookmark = findExecutionResult.Value!;
 
-        if (existingBookmark is not null)
+        if (existingBookmark is null)
         {
-            return ExecutionResult<bool>.Failure($"A bookmark with the name `{name}` already exists. It will thus not be added");
+            return ExecutionResult<bool>.Failure($"A bookmark with the name `{name}` does not exist. No removal was performed.");
         }
 
-        await _repository.AddAsync(new Bookmark
+        ExecutionResult<Bookmark> removeResult = await _repository.DeleteAsync(existingBookmark);
+
+        if (!removeResult.IsSuccess)
         {
-            Name = name,
-            Url = url,
-            Category = category
-        });
+            return removeResult.ToFailure<bool>();
+        }
 
         return ExecutionResult<bool>.Success(true);
     }
@@ -53,18 +103,18 @@ public class BookmarkService : IBookMarkService
 
     public async Task<ExecutionResult<IEnumerable<string>>> GetExistingCategoriesAsync()
     {
-        var executionResult = await _repository.FindAllAsync(false);
+        ExecutionResult<IEnumerable<Bookmark>> executionResult = await _repository.FindAllAsync(false);
 
         if (!executionResult.IsSuccess)
         {
             return executionResult.ToFailure<IEnumerable<string>>();
         }
 
-        var bookmarks = executionResult.Value;
+        IEnumerable<Bookmark>? bookmarks = executionResult.Value;
 
         if (bookmarks is not null && bookmarks.Any())
         {
-            var categories = bookmarks
+            IEnumerable<string> categories = bookmarks
                 .Where(book => !string.IsNullOrWhiteSpace(book.Category))
                 .Select(book => book.Category!)
                 .Distinct();
@@ -77,7 +127,7 @@ public class BookmarkService : IBookMarkService
 
     public async Task<ExecutionResult<bool>> ChangeBookmarkCategoryAsync(string url, string category)
     {
-        var executionResult = await _repository.FindBookmarkByUrl(url, isTrackingChanges: true);
+        ExecutionResult<Bookmark> executionResult = await _repository.FindBookmarkByUrl(url, isTrackingChanges: true);
 
         if (!executionResult.IsSuccess)
         {
@@ -98,7 +148,7 @@ public class BookmarkService : IBookMarkService
 
     public async Task<ExecutionResult<IEnumerable<Bookmark>>> GetBookmarksAsync(bool isTrackingChanges)
     {
-        var executionResult = await _repository.FindAllAsync(isTrackingChanges: false);
+        ExecutionResult<IEnumerable<Bookmark>> executionResult = await _repository.FindAllAsync(isTrackingChanges);
 
         if (!executionResult.IsSuccess)
         {
@@ -117,14 +167,14 @@ public class BookmarkService : IBookMarkService
 
     public async Task<ExecutionResult<Bookmark>> GetBookmarkAsync(string bookmarkName)
     {
-        var executionResult = await _repository.FindBookmarkByName(bookmarkName, isTrackingChanges: false);
+        ExecutionResult<Bookmark> executionResult = await _repository.FindBookmarkByName(bookmarkName, isTrackingChanges: false);
 
         if (!executionResult.IsSuccess)
         {
             return executionResult;
         }
 
-        var bookmark = executionResult.Value;
+        Bookmark? bookmark = executionResult.Value;
 
         if (bookmark is null)
         {
@@ -140,22 +190,22 @@ public class BookmarkService : IBookMarkService
         await File.WriteAllTextAsync(outputFile.FullName, json, cancellationToken);
     }
 
-    public async Task<ExecutionResult<BookMarkConflictModel>> Import(Bookmark bookmark, bool merge)
+    public async Task<ExecutionResult<Bookmark>> Import(Bookmark bookmark, bool merge)
     {
         // Check for existing bookmark
-        var executionResult = await _repository.FindBookmarkByUrl(bookmark.Url, isTrackingChanges: true);
+        ExecutionResult<Bookmark> findExecutionResult = await _repository.FindBookmarkByUrl(bookmark.Url, isTrackingChanges: true);
 
-        if (!executionResult.IsSuccess)
+        if (!findExecutionResult.IsSuccess)
         {
-            return executionResult.ToFailure<BookMarkConflictModel>();
+            return findExecutionResult.ToFailure<Bookmark>();
         }
 
         // IF present, update with argument bookmark
-        var existingBookmark = executionResult.Value;
+        Bookmark? existingBookmark = findExecutionResult.Value;
 
         if (existingBookmark is not null && merge)
         {
-            var conflictModel = new BookMarkConflictModel
+            BookMarkConflictModel conflictModel = new BookMarkConflictModel
             {
                 OriginalName = existingBookmark.Name,
                 UpdatedName = bookmark.Name,
@@ -163,25 +213,25 @@ public class BookmarkService : IBookMarkService
             };
             existingBookmark.Name = bookmark.Name;
 
-            return ExecutionResult<BookMarkConflictModel>.Success(conflictModel);
+            return ExecutionResult<Bookmark>.Success(existingBookmark);
         }
         else
         {
-            await _repository.AddAsync(bookmark);
-            return ExecutionResult<BookMarkConflictModel>.Success(null);
+            ExecutionResult<Bookmark> addExecutionResult = await _repository.AddAsync(bookmark);
+            return addExecutionResult;
         }
     }
 
     public async Task<ExecutionResult<IEnumerable<Bookmark>>> GetBookmarksByCategory(string category)
     {
-        var executionResult = await _repository.FindBookmarksByCategory(category, isTrackingChanges: false);
+        ExecutionResult<IEnumerable<Bookmark>> executionResult = await _repository.FindBookmarksByCategory(category, isTrackingChanges: false);
 
         if (!executionResult.IsSuccess)
         {
             return executionResult;
         }
 
-        var bookmarks = executionResult.Value;
+        IEnumerable<Bookmark>? bookmarks = executionResult.Value;
 
         if (bookmarks is null || !bookmarks.Any())
         {
@@ -193,7 +243,7 @@ public class BookmarkService : IBookMarkService
 
     public async Task<ExecutionResult<bool>> PrintBookmarks()
     {
-        var executionResult = await _repository.FindAllAsync(isTrackingChanges: false);
+        ExecutionResult<IEnumerable<Bookmark>> executionResult = await _repository.FindAllAsync(isTrackingChanges: false);
 
         if (!executionResult.IsSuccess)
         {
@@ -207,11 +257,16 @@ public class BookmarkService : IBookMarkService
             return ExecutionResult<bool>.Failure("No bookmarks found. Will not print bookmarks.");
         }
 
-        foreach (var bookmark in bookmarks ?? Enumerable.Empty<Bookmark>())
+        foreach (Bookmark bookmark in bookmarks ?? Enumerable.Empty<Bookmark>())
         {
             Console.WriteLine(bookmark.ToString());
         }
 
         return ExecutionResult<bool>.Success(true);
+    }
+
+    public async Task<int> SaveChangesAsync()
+    {
+        return await _repository.SaveChangesAsync();
     }
 }

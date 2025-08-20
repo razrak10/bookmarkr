@@ -1,19 +1,20 @@
 using bookmarkr.Helpers;
 using bookmarkr.Logger;
+using bookmarkr.Service;
 using System.CommandLine;
 
 namespace bookmarkr;
 
 public class LinkAddCommandHandler
 {
-    private readonly BookmarkService _bookmarkService;
+    private readonly IBookmarkService _bookmarkService;
 
-    public LinkAddCommandHandler(BookmarkService service)
+    public LinkAddCommandHandler(IBookmarkService service)
     {
         _bookmarkService = service;
     }
 
-    public Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public async Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         var names = parseResult.GetValue<string[]>("name");
         var urls = parseResult.GetValue<string[]>("url");
@@ -22,19 +23,18 @@ public class LinkAddCommandHandler
         if (names is null || urls is null || categories is null)
         {
             MessageHelper.ShowErrorMessage(["Provided bookmark name, urls or categories is null"]);
-            return Task.FromResult(-1);
+            return -1;
         }
 
-        OnHandleAddLinkCommandAsync(_bookmarkService, names, urls, categories);
-        return Task.FromResult(0);
+        await OnHandleAddLinkCommandAsync(names, urls, categories);
+        return 0;
     }
 
-    private async static void OnHandleAddLinkCommandAsync(
-        BookmarkService bookmarkService, string[] names, string[] urls, string[] categories)
+    private async Task OnHandleAddLinkCommandAsync(string[] names, string[] urls, string[] categories)
     {
         for (int i = 0; i < names.Length; i++)
         {
-            var executionResult = await bookmarkService.AddLinkAsync(names[i], urls[i], categories[i]);
+            var executionResult = await _bookmarkService.AddLinkAsync(names[i], urls[i], categories[i]);
 
             if (!executionResult.IsSuccess)
             {
@@ -46,6 +46,6 @@ public class LinkAddCommandHandler
             MessageHelper.ShowSuccessMessage(["Bookmarks added successfully."]);
         }
 
-        await MessageHelper.ListAll(bookmarkService);
+        await MessageHelper.ListAll(_bookmarkService);
     }
 }

@@ -1,16 +1,17 @@
+using bookmarkr.Service;
 using Spectre.Console;
 
 namespace bookmarkr.Helpers;
 
 public class MessageHelper
 {
-    public static async Task ListAll(BookmarkService bookmarkService)
+    public static async Task ListAll(IBookmarkService bookmarkService)
     {
         var result = await bookmarkService.GetBookmarksAsync(false);
 
-        if (result.IsSuccess && result.Value.Any())
+        if (result.IsSuccess && result.Value!.Any())
         {
-            foreach (Bookmark bookmark in result.Value)
+            foreach (Bookmark bookmark in result.Value!)
             {
                 Console.WriteLine($"Name: '{bookmark.Name}' | URL: '{bookmark.Url}' | Category: '{bookmark.Category}'");
             }
