@@ -64,7 +64,7 @@ public class LinkRemoveCommandHandler
         if (!removeResult.IsSuccess)
         {
             LogManager.LogError(removeResult.Message!, removeResult.Exception);
-            MessageHelper.ShowErrorMessage(["Error occured while attempting to add bookmark", $"{removeResult.Message}"]);
+            MessageHelper.ShowErrorMessage(["Error occured while attempting to remove bookmark", $"{removeResult.Message}"]);
             return;
         }
 
