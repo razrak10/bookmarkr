@@ -1,14 +1,15 @@
 using bookmarkr.Helpers;
 using bookmarkr.Logger;
+using bookmarkr.Service;
 using System.CommandLine;
 
 namespace bookmarkr;
 
 public class LinkCommandHandler
 {
-    private readonly BookmarkService _bookmarkService;
+    private readonly IBookmarkService _bookmarkService;
 
-    public LinkCommandHandler(BookmarkService service)
+    public LinkCommandHandler(IBookmarkService service)
     {
         _bookmarkService = service;
     }

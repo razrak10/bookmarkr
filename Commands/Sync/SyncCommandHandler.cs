@@ -1,6 +1,7 @@
 using bookmarkr.ExecutionResult;
 using bookmarkr.Helpers;
 using bookmarkr.Logger;
+using bookmarkr.Service;
 using bookmarkr.ServiceAgent;
 using System.CommandLine;
 
@@ -8,10 +9,10 @@ namespace bookmarkr.Commands.Sync;
 
 public class SyncCommandHandler
 {
-    private readonly BookmarkService _bookmarkService;
+    private readonly IBookmarkService _bookmarkService;
     private readonly IBookmarkrSyncrServiceAgent _serviceAgent;
 
-    public SyncCommandHandler(BookmarkService bookMarkService, IBookmarkrSyncrServiceAgent serviceAgent)
+    public SyncCommandHandler(IBookmarkService bookMarkService, IBookmarkrSyncrServiceAgent serviceAgent)
     {
         _bookmarkService = bookMarkService;
         _serviceAgent = serviceAgent;

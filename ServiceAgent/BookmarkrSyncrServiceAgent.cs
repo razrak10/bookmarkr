@@ -3,6 +3,7 @@ using bookmarkr.Logger;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace bookmarkr.ServiceAgent
 {
@@ -24,7 +25,7 @@ namespace bookmarkr.ServiceAgent
                 string serializedRetrievedBookmarks = JsonSerializer.Serialize(localBookmarks);
                 var content = new StringContent(serializedRetrievedBookmarks, Encoding.UTF8, "application/json");
 
-                var httpClient = _clientFactory.CreateClient("bookmarkrSyncr");
+                using var httpClient = _clientFactory.CreateClient("bookmarkrSyncr");
                 var response = await httpClient.PostAsync("sync", content);
 
                 if (response.IsSuccessStatusCode)
@@ -34,10 +35,8 @@ namespace bookmarkr.ServiceAgent
                         PropertyNameCaseInsensitive = true,
                     };
 
-                    mergedBookmarks = await JsonSerializer.DeserializeAsync<List<Bookmark>>(
-                        await response?.Content?.ReadAsStreamAsync(),
-                        options
-                    );
+                    mergedBookmarks = await JsonSerializer.DeserializeAsync<List<Bookmark>>(await response?.Content?.ReadAsStreamAsync(),
+                                                                                            options);
 
                     if (mergedBookmarks is not null && mergedBookmarks.Any())
                     {

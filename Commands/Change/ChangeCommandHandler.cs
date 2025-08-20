@@ -2,20 +2,21 @@ using System;
 using System.CommandLine;
 using bookmarkr.Helpers;
 using bookmarkr.Logger;
+using bookmarkr.Service;
 using Spectre.Console;
 
 namespace bookmarkr.Commands;
 
 public class ChangeCommandHandler
 {
-    private readonly BookmarkService _bookmarkService;
+    private readonly IBookmarkService _bookmarkService;
 
-    public ChangeCommandHandler(BookmarkService bookMarkService)
+    public ChangeCommandHandler(IBookmarkService bookMarkService)
     {
         _bookmarkService = bookMarkService;
     }
 
-    public  async Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
+    public async Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
         var url = parseResult.GetValue<string>("forUrl");
         if (!string.IsNullOrWhiteSpace(url))

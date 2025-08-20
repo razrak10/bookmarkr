@@ -44,13 +44,16 @@ namespace bookmarkr.Persistence
                 .IsUnique()
                 .HasDatabaseName("IX_Bookmarks_Url_Unique");
 
+            // Seed initial data with static DateTime values
+            var staticDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
             // Seed initial data
             builder.HasData(
-                new Bookmark { Id = 1, Name = "First", Category = "Cars", Url = "https://www.lol.com" },
-                new Bookmark { Id = 2, Name = "Second", Category = "Tech", Url = "https://www.second.com" },
-                new Bookmark { Id = 3, Name = "Third", Category = "Tech", Url = "https://www.third.com" },
-                new Bookmark { Id = 4, Name = "Fourth", Category = "Cooking", Url = "https://www.cooking.com" },
-                new Bookmark { Id = 5, Name = "Fifth", Category = "SocialMedia", Url = "https://www.social.com" }
+                new Bookmark { Id = 1, Name = "First", Category = "Cars", Url = "https://www.lol.com", CreatedAt = staticDate, UpdatedAt = staticDate },
+                new Bookmark { Id = 2, Name = "Second", Category = "Tech", Url = "https://www.second.com", CreatedAt = staticDate, UpdatedAt = staticDate },
+                new Bookmark { Id = 3, Name = "Third", Category = "Tech", Url = "https://www.third.com", CreatedAt = staticDate, UpdatedAt = staticDate },
+                new Bookmark {Id = 4, Name = "Fourth", Category = "Cooking", Url = "https://www.cooking.com", CreatedAt = staticDate, UpdatedAt = staticDate },
+                new Bookmark {Id = 5, Name = "Fifth", Category = "SocialMedia", Url = "https://www.social.com", CreatedAt = staticDate, UpdatedAt = staticDate }
             );
         }
     }

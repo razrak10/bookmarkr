@@ -1,5 +1,6 @@
 using bookmarkr.Helpers;
 using bookmarkr.Logger;
+using bookmarkr.Service;
 using Spectre.Console;
 using System.CommandLine;
 using System.Text.Json;
@@ -8,9 +9,9 @@ namespace bookmarkr.Commands;
 
 public class InteractiveCommandHandler
 {
-    private readonly BookmarkService _bookmarkService;
+    private readonly IBookmarkService _bookmarkService;
 
-    public InteractiveCommandHandler(BookmarkService bookmarkService)
+    public InteractiveCommandHandler(IBookmarkService bookmarkService)
     {
         _bookmarkService = bookmarkService;
     }

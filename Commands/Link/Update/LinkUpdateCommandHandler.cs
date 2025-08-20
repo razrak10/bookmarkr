@@ -1,37 +1,38 @@
 using bookmarkr.Helpers;
 using bookmarkr.Logger;
+using bookmarkr.Service;
 using System.CommandLine;
 
 namespace bookmarkr;
 
 public class LinkUpdateCommandHandler
 {
-    private readonly BookmarkService _bookmarkService;
+    private readonly IBookmarkService _bookmarkService;
 
-    public LinkUpdateCommandHandler(BookmarkService bookMarkService)
+    public LinkUpdateCommandHandler(IBookmarkService bookMarkService)
     {
         _bookmarkService = bookMarkService;
     }
 
     public async Task<int> HandleAsync(ParseResult parseResult, CancellationToken cancellationToken = default)
     {
-        var name = parseResult.GetValue<string>("name");
-        var url = parseResult.GetValue<string>("url");
+        string[]? names = parseResult.GetValue<string[]>("name");
+        string[]? urls = parseResult.GetValue<string[]>("url");
 
-        if (name is not null
-            && !string.IsNullOrWhiteSpace(name)
-            && url is not null
-            && !string.IsNullOrWhiteSpace(url))
+        if (names is not null
+            && names.Any()
+            && urls is not null
+            && urls.Any())
         {
-            await OnHandleUpdateCommand(_bookmarkService, name, url);
+            await OnHandleUpdateCommand(names, urls);
         }
 
         return 0;
     }
 
-    private async Task OnHandleUpdateCommand(BookmarkService bookMarkService, string name, string url)
+    private async Task OnHandleUpdateCommand(string[] names, string[] urls)
     {
-        var result = await _bookmarkService.GetBookmarksAsync(false);
+        var result = await _bookmarkService.GetBookmarksAsync(true);
 
         if (!result.IsSuccess)
         {
@@ -49,17 +50,23 @@ public class LinkUpdateCommandHandler
             return;
         }
 
-        var foundBookmark = bookmarks.Find(b => string.Equals(b.Name, name, StringComparison.OrdinalIgnoreCase));
-
-        if (foundBookmark is null)
+        for (int i = 0; i < names.Count(); i++)
         {
-            MessageHelper.ShowWarningMessage(["Bookmark does not exist. Use the `link add` command to add a new bookmark."]);
-            return;
+            var foundBookmark = bookmarks.Find(b => string.Equals(b.Name, names[i], StringComparison.OrdinalIgnoreCase));
+
+            if (foundBookmark is null)
+            {
+                MessageHelper.ShowWarningMessage(["Bookmark does not exist. Use the `link add` command to add a new bookmark."]);
+                return;
+            }
+
+            foundBookmark.Url = urls[i];
+
+            await _bookmarkService.SaveChangesAsync();
+
+            MessageHelper.ShowSuccessMessage(["Bookmark(s) updated successfully."]);
         }
 
-        foundBookmark.Url = url;
-
-        MessageHelper.ShowSuccessMessage(["Bookmark updated successfully."]);
-        await MessageHelper.ListAll(bookMarkService);
+        await MessageHelper.ListAll(_bookmarkService);
     }
 }
