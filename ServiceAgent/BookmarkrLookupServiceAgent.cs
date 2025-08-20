@@ -52,7 +52,7 @@ namespace bookmarkr.ServiceAgent
             }
             catch (Exception ex)
             {
-                return ExecutionResult<string>.Failure("Error occured while attempting to lookup the bookmark URL", ex);
+                return ExecutionResult<string>.Failure("Error occurred while attempting to lookup the bookmark URL", ex);
             }
         }
     }
