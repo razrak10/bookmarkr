@@ -36,7 +36,7 @@ public class BookmarkService : IBookmarkService
 
         if (!nameResult.IsSuccess)
         {
-            bookmarkName = "Unamed bookmark";
+            bookmarkName = "Unnamed bookmark";
         }
         else if (nameResult.IsSuccess && string.Equals(nameResult.Value, name))
         {
