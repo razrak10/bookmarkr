@@ -39,11 +39,6 @@ namespace bookmarkr.ServiceAgent
             }
             catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
             {
-                return ExecutionResult<string>.Failure($"HttpRequest exception occurred while attempting to lookup the bookmark URL. Status code: {ex.StatusCode}",
-                    ex);
-            }
-            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
-            {
                 return ExecutionResult<string>.Failure("Timeout occurred while attempting to lookup the bookmark URL", ex);
             }
             catch (TaskCanceledException ex)
