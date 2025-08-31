@@ -18,6 +18,11 @@ namespace bookmarkr.ServiceAgent
 
         public async Task<ExecutionResult<List<Bookmark>>> SyncBookmarksAsync(List<Bookmark> localBookmarks)
         {
+            if (!localBookmarks.Any())
+            {
+                return ExecutionResult<List<Bookmark>>.Failure("No bookmarks provided");
+            }
+
             const string defaultErrorMessage = "An error occured when attempting to sync bookmarks.";
             try
             {
@@ -35,8 +40,9 @@ namespace bookmarkr.ServiceAgent
                         PropertyNameCaseInsensitive = true,
                     };
 
-                    mergedBookmarks = await JsonSerializer.DeserializeAsync<List<Bookmark>>(await response?.Content?.ReadAsStreamAsync(),
-                                                                                            options);
+                    mergedBookmarks = await JsonSerializer.DeserializeAsync<List<Bookmark>>(
+                        await response?.Content?.ReadAsStreamAsync(),
+                        options);
 
                     if (mergedBookmarks is not null && mergedBookmarks.Any())
                     {
