@@ -69,6 +69,20 @@ Communication with external services is encapsulated in Service Agents. For exam
 
 - **HTTP Client Management:** `IHttpClientFactory` is used to manage `HttpClient` instances. A named client, `bookmarkrSyncr`, is configured with a base address and default headers for communicating with the sync API.
 
+## Performance Benchmarking
+
+The project uses **BenchmarkDotNet** to measure the performance of critical operations. This is useful for identifying performance bottlenecks and validating optimizations.
+
+### Running Benchmarks
+
+To run the benchmarks, execute the following command from the `src/bookmarkr` directory:
+
+```bash
+dotnet run -- benchmark
+```
+
+This command triggers the benchmark runner, which executes the defined benchmark tests (e.g., `AddBookmarks`) and outputs a detailed performance summary to the console instead of starting the regular CLI application.
+
 ## Project Structure
 
 ```
@@ -84,3 +98,48 @@ src/
 tests/
 └── bookmarkr.Tests/      # Unit tests for the application
 ```
+## Docker Support
+
+This project includes a `Dockerfile` to build and run the application in a containerized environment.
+
+### Building the Image
+
+To build the Docker image, navigate to the root of the repository and run the following command:
+
+```bash
+docker build -t bookmarkr .
+```
+
+This command builds the image and tags it with the name `bookmarkr`.
+
+### Running the Container
+
+You can run the application in interactive mode, which allows you to use the CLI directly within the container.
+
+**To start interactive mode:**
+
+```bash
+docker run -it --rm bookmarkr
+```
+
+This will launch the application and display the main help menu.
+
+**To run a specific command:**
+
+You can pass commands directly after the image name. For example, to start in interactive mode
+
+```bash
+docker run -it --rm bookmarkr interactive
+```
+
+**Persisting Data**
+
+The SQLite database (`bookmarks.db`) is created inside the container. To persist your bookmarks between container runs, you need to mount a local directory into the container.
+
+```bash
+# Creates a 'data' folder in your current directory if it doesn't exist
+# and maps it to the /app directory in the container.
+docker run -it --rm -v ${PWD}/data:/app bookmarkr
+```
+
+Now, the `bookmarks.db` file will be stored in the `data` folder on your host machine, and your bookmarks will be saved even after the container is removed.
