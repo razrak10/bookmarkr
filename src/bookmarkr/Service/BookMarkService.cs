@@ -18,7 +18,7 @@ public class BookmarkService : IBookmarkService
         _lookupServiceAgent = serviceAgent;
     }
 
-    public async Task<ExecutionResult<bool>> AddLinkAsync(string name, string url, string category)
+    public async Task<ExecutionResult<bool>> AddBookmarkAsync(string name, string url, string category)
     {
         string bookmarkName = string.Empty;
 

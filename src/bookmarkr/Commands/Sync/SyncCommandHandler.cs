@@ -9,6 +9,7 @@ namespace bookmarkr.Commands.Sync;
 
 public class SyncCommandHandler
 {
+    // TODO: Move Syncr service agent to bookmarkservice as a dependency
     private readonly IBookmarkService _bookmarkService;
     private readonly IBookmarkrSyncrServiceAgent _serviceAgent;
 

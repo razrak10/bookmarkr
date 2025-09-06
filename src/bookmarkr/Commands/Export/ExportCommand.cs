@@ -1,4 +1,3 @@
-using System;
 using System.CommandLine;
 
 namespace bookmarkr.Commands.Export;

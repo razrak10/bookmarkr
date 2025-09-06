@@ -114,7 +114,7 @@ public class InteractiveCommandHandler
                     task.Increment(1);
 
                     // Slow down process
-                    Thread.Sleep(250);
+                    Thread.Sleep(50);
                 }
             }
         });

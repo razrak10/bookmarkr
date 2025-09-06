@@ -80,9 +80,7 @@ public class CategoryCommandTests
     [Test]
     public void AssignHandler_WithCustomAction_ShouldReturnSameInstance()
     {
-        // Arrange
-        var customActionCalled = false;
-        Action<ParseResult> customAction = _ => { customActionCalled = true; };
+        Action<ParseResult> customAction = _ => { };
 
         // Act
         var result = _sut.AssignHandler(customAction);
@@ -111,7 +109,6 @@ public class CategoryCommandTests
         var customAction = new Action<ParseResult>(_ => { customActionExecuted = true; });
 
         var rootCommand = new RootCommand();
-        rootCommand.Add(_sut);
         _sut.AssignHandler(customAction);
 
         // Act

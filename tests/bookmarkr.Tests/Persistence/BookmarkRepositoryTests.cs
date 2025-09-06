@@ -163,11 +163,11 @@ public class BookmarkRepositoryTests
 
         // Assert
         Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.Name, Is.EqualTo("Updated"));
+        Assert.That(result.Value?.Name, Is.EqualTo("Updated"));
         Assert.That(result.Value.Url, Is.EqualTo("https://updated.com"));
 
         var updatedBookmark = await _context.Bookmarks.FirstOrDefaultAsync(b => b.Id == bookmark.Id);
-        Assert.That(updatedBookmark.Name, Is.EqualTo("Updated"));
+        Assert.That(updatedBookmark?.Name, Is.EqualTo("Updated"));
     }
 
     [Test]
@@ -370,7 +370,7 @@ public class BookmarkRepositoryTests
         Assert.That(results.All(r => r.IsSuccess), Is.True);
 
         var allBookmarks = await _repository.FindAllAsync(false);
-        Assert.That(allBookmarks.Value.Count(), Is.EqualTo(10));
+        Assert.That(allBookmarks.Value?.Count(), Is.EqualTo(10));
     }
 
     [Test]
@@ -387,9 +387,12 @@ public class BookmarkRepositoryTests
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.Value, Is.Not.Null);
 
-        // Verify tracking by checking EntityState
-        var entry = _context.Entry(result.Value);
-        Assert.That(entry.State, Is.EqualTo(EntityState.Unchanged));
+        if (result.Value is not null)
+        {
+            // Verify tracking by checking EntityState
+            var entry = _context.Entry(result.Value);
+            Assert.That(entry.State, Is.EqualTo(EntityState.Unchanged));
+        }
     }
 
     [Test]
@@ -407,8 +410,11 @@ public class BookmarkRepositoryTests
         Assert.That(result.Value, Is.Not.Null);
 
         // Verify no tracking by checking EntityState
-        var entry = _context.Entry(result.Value);
-        Assert.That(entry.State, Is.EqualTo(EntityState.Detached));
+        if (result.Value is not null)
+        {
+            var entry = _context.Entry(result.Value);
+            Assert.That(entry.State, Is.EqualTo(EntityState.Detached));
+        }
     }
 
     private async Task SeedDatabase()

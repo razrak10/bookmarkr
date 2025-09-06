@@ -78,9 +78,7 @@ public class ChangeCommandTests
     [Test]
     public void AssignHandler_WithCustomAction_ShouldReturnSameInstance()
     {
-        // Arrange
-        var customActionCalled = false;
-        Action<ParseResult> customAction = _ => { customActionCalled = true; };
+        Action<ParseResult> customAction = _ => { };
 
         // Act
         var result = _sut.AssignHandler(customAction);

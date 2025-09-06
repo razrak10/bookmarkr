@@ -34,7 +34,7 @@ public class LinkAddCommandHandler
     {
         for (int i = 0; i < names.Length; i++)
         {
-            var executionResult = await _bookmarkService.AddLinkAsync(names[i], urls[i], categories[i]);
+            var executionResult = await _bookmarkService.AddBookmarkAsync(names[i], urls[i], categories[i]);
 
             if (!executionResult.IsSuccess)
             {
