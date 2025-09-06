@@ -4,7 +4,7 @@ namespace bookmarkr.Service;
 
 public interface IBookmarkService
 {
-    Task<ExecutionResult<bool>> AddLinkAsync(string name, string url, string category);
+    Task<ExecutionResult<bool>> AddBookmarkAsync(string name, string url, string category);
     Task<ExecutionResult<bool>> RemoveLinkAsync(string name);
     Task<ExecutionResult<bool>> ChangeBookmarkCategoryAsync(string url, string category);
     void ExportBookmarksAsync(IEnumerable<Bookmark> bookmarks, FileInfo outputFile, CancellationToken cancellationToken = default);

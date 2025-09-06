@@ -147,7 +147,7 @@ namespace bookmarkr.Persistence
 
             Bookmark? bookmark = await executionResult.Value!.SingleOrDefaultAsync();
 
-            return ExecutionResult<Bookmark>.Success(bookmark);
+            return ExecutionResult<Bookmark>.Success(bookmark!);
         }
 
         public async Task<ExecutionResult<Bookmark>> FindBookmarkByName(string name, bool isTrackingChanges)
@@ -159,9 +159,9 @@ namespace bookmarkr.Persistence
                 return executionResult.ToFailure<Bookmark>();
             }
 
-            Bookmark? bookmark = await executionResult.Value.SingleOrDefaultAsync();
+            Bookmark? bookmark = await executionResult.Value!.SingleOrDefaultAsync();
 
-            return ExecutionResult<Bookmark>.Success(bookmark);
+            return ExecutionResult<Bookmark>.Success(bookmark!);
         }
 
         public async Task<ExecutionResult<Bookmark>> FindBookmarkByUrl(string url, bool isTrackingChanges)
@@ -173,9 +173,9 @@ namespace bookmarkr.Persistence
                 return executionResult.ToFailure<Bookmark>();
             }
 
-            Bookmark? bookmark = await executionResult.Value.SingleOrDefaultAsync();
+            Bookmark? bookmark = await executionResult.Value!.SingleOrDefaultAsync();
 
-            return ExecutionResult<Bookmark>.Success(bookmark);
+            return ExecutionResult<Bookmark>.Success(bookmark!);
         }
 
         public async Task<ExecutionResult<IEnumerable<Bookmark>>> FindBookmarksByCategory(string category, bool isTrackingChanges)
@@ -188,7 +188,7 @@ namespace bookmarkr.Persistence
                 return executionResult.ToFailure<IEnumerable<Bookmark>>();
             }
 
-            IEnumerable<Bookmark> bookmarks = await executionResult.Value.ToListAsync();
+            IEnumerable<Bookmark> bookmarks = await executionResult.Value!.ToListAsync();
 
             return ExecutionResult<IEnumerable<Bookmark>>.Success(bookmarks);
         }

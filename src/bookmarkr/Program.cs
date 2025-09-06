@@ -1,4 +1,6 @@
-﻿using bookmarkr.Commands;
+﻿using BenchmarkDotNet.Running;
+using bookmarkr.Benchmarks;
+using bookmarkr.Commands;
 using bookmarkr.Commands.Category;
 using bookmarkr.Commands.Export;
 using bookmarkr.Commands.Import;
@@ -27,6 +29,12 @@ class Program
 
     static async Task<int> Main(string[] args)
     {
+        if (args.Length > 0 && args[0].ToLower() == "benchmark")
+        {
+            BenchmarkRunner.Run<BookmarkrBenchmarks>();
+            return 0;
+        }
+
         FreeSerilogLoggerOnShutdown();
         CreateLogger();
 
