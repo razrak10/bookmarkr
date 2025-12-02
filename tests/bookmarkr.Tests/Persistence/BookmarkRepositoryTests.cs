@@ -1,18 +1,23 @@
-﻿using bookmarkr.ExecutionResult;
 using bookmarkr.Persistence;
+using bookmarkr.Persistence.Abstractions;
+using bookmarkr.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
+
 
 namespace bookmarkr.Tests.Persistence;
 
+/// <summary>
+/// Unit tests for the new BookmarkRepository implementation using Unit of Work pattern.
+/// These tests validate the new architecture that follows DDD and SOLID principles.
+/// </summary>
 [TestFixture]
 public class BookmarkRepositoryTests
 {
-    private BookmarkrDbContext _context;
-    private BookmarkRepository _repository;
-    private List<Bookmark> _testBookmarks;
+    private BookmarkrDbContext _context = null!;
+    private IBookmarkRepository _repository = null!;
 
     [SetUp]
-    public void SetUp()
+    public void Setup()
     {
         var options = new DbContextOptionsBuilder<BookmarkrDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -20,13 +25,6 @@ public class BookmarkRepositoryTests
 
         _context = new BookmarkrDbContext(options);
         _repository = new BookmarkRepository(_context);
-
-        _testBookmarks = new List<Bookmark>
-        {
-            new Bookmark { Id = 1, Name = "Test Bookmark 1", Url = "https://test1.com", Category = "Tech" },
-            new Bookmark { Id = 2, Name = "Test Bookmark 2", Url = "https://test2.com", Category = "Social" },
-            new Bookmark { Id = 3, Name = "Test Bookmark 3", Url = "https://test3.com", Category = "Tech" }
-        };
     }
 
     [TearDown]
@@ -35,391 +33,421 @@ public class BookmarkRepositoryTests
         _context.Dispose();
     }
 
-    [Test]
-    public void Constructor_WithValidContext_ShouldCreateInstance()
-    {
-        // Arrange & Act
-        var repository = new BookmarkRepository(_context);
-
-        // Assert
-        Assert.That(repository, Is.Not.Null);
-        Assert.That(repository, Is.InstanceOf<IBookmarkRepository>());
-    }
+    #region GetByIdAsync Tests
 
     [Test]
-    public async Task AddAsync_WithValidBookmark_ShouldReturnSuccessResult()
+    public async Task GetByIdAsync_EntityExists_ReturnsEntity()
     {
         // Arrange
-        var bookmark = new Bookmark { Name = "New Bookmark", Url = "https://new.com", Category = "Tech" };
-
-        // Act
-        var result = await _repository.AddAsync(bookmark);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.EqualTo(bookmark));
-        Assert.That(bookmark.Id, Is.GreaterThan(0));
-
-        var savedBookmark = await _context.Bookmarks.FirstOrDefaultAsync(b => b.Name == "New Bookmark");
-        Assert.That(savedBookmark, Is.Not.Null);
-        Assert.That(savedBookmark.Url, Is.EqualTo("https://new.com"));
-    }
-
-    [Test]
-    public async Task DeleteAsync_WithExistingBookmark_ShouldReturnSuccessResult()
-    {
-        // Arrange
-        var bookmark = new Bookmark { Name = "To Delete", Url = "https://delete.com", Category = "Tech" };
+        var bookmark = new Bookmark { Name = "Test", Url = "https://test.com", Category = "Testing" };
         await _context.Bookmarks.AddAsync(bookmark);
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _repository.DeleteAsync(bookmark);
+        var result = await _repository.GetByIdAsync(bookmark.Id);
 
         // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.EqualTo(bookmark));
-
-        var deletedBookmark = await _context.Bookmarks.FirstOrDefaultAsync(b => b.Id == bookmark.Id);
-        Assert.That(deletedBookmark, Is.Null);
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Name, Is.EqualTo("Test"));
     }
 
     [Test]
-    public async Task DeleteAsync_WithNonExistingBookmark_ShouldReturnFailureResult()
-    {
-        // Arrange
-        var bookmark = new Bookmark { Id = 999, Name = "Non Existing", Url = "https://nonexisting.com", Category = "Tech" };
-
-        // Act
-        var result = await _repository.DeleteAsync(bookmark);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.False);
-        Assert.That(result.Message, Does.Contain("Error occured while deleting bookmark from database"));
-    }
-
-    [Test]
-    public async Task FindAllAsync_WithTrackingChanges_ShouldReturnOrderedBookmarks()
-    {
-        // Arrange
-        await SeedDatabase();
-
-        // Act
-        var result = await _repository.FindAllAsync(true);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Not.Null);
-        Assert.That(result.Value.Count(), Is.EqualTo(3));
-
-        var bookmarks = result.Value.ToList();
-        Assert.That(bookmarks[0].Id, Is.LessThanOrEqualTo(bookmarks[1].Id));
-        Assert.That(bookmarks[1].Id, Is.LessThanOrEqualTo(bookmarks[2].Id));
-    }
-
-    [Test]
-    public async Task FindAllAsync_WithoutTrackingChanges_ShouldReturnOrderedBookmarks()
-    {
-        // Arrange
-        await SeedDatabase();
-
-        // Act
-        var result = await _repository.FindAllAsync(false);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Not.Null);
-        Assert.That(result.Value.Count(), Is.EqualTo(3));
-
-        var bookmarks = result.Value.ToList();
-        Assert.That(bookmarks[0].Id, Is.LessThanOrEqualTo(bookmarks[1].Id));
-    }
-
-    [Test]
-    public async Task FindAllAsync_WithEmptyDatabase_ShouldReturnEmptyCollection()
+    public async Task GetByIdAsync_EntityNotExists_ReturnsNull()
     {
         // Act
-        var result = await _repository.FindAllAsync(false);
+        var result = await _repository.GetByIdAsync(999);
 
         // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Not.Null);
-        Assert.That(result.Value.Count(), Is.EqualTo(0));
+        Assert.That(result, Is.Null);
     }
 
     [Test]
-    public async Task UpdateAsync_WithValidBookmark_ShouldReturnSuccessResult()
+    public void GetByIdAsync_CancellationRequested_ThrowsOperationCancelledException()
     {
         // Arrange
-        var bookmark = new Bookmark { Name = "Original", Url = "https://original.com", Category = "Tech" };
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act & Assert
+        Assert.ThrowsAsync<OperationCanceledException>(
+            async () => await _repository.GetByIdAsync(1, cts.Token));
+    }
+
+    #endregion
+
+    #region GetAllAsync Tests
+
+    [Test]
+    public async Task GetAllAsync_MultipleEntities_ReturnsAllOrderedById()
+    {
+        // Arrange
+        await _context.Bookmarks.AddRangeAsync(
+            new Bookmark { Name = "Zebra", Url = "https://zebra.com" },
+            new Bookmark { Name = "Apple", Url = "https://apple.com" },
+            new Bookmark { Name = "Banana", Url = "https://banana.com" }
+        );
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetAllAsync();
+
+        // Assert
+        Assert.That(result, Has.Count.EqualTo(3));
+        Assert.That(result[0].Id, Is.LessThan(result[1].Id));
+    }
+
+    [Test]
+    public async Task GetAllAsync_NoEntities_ReturnsEmptyList()
+    {
+        // Act
+        var result = await _repository.GetAllAsync();
+
+        // Assert
+        Assert.That(result, Is.Empty);
+    }
+
+    [Test]
+    public void GetAllAsync_CancellationRequested_ThrowsOperationCancelledException()
+    {
+        // Arrange
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act & Assert
+        Assert.ThrowsAsync<OperationCanceledException>(
+            async () => await _repository.GetAllAsync(cts.Token));
+    }
+
+    #endregion
+
+    #region AddAsync Tests
+
+    [Test]
+    public async Task AddAsync_ValidEntity_AddsToContext()
+    {
+        // Arrange
+        var bookmark = new Bookmark { Name = "New", Url = "https://new.com" };
+
+        // Act
+        await _repository.AddAsync(bookmark);
+        await _context.SaveChangesAsync();
+
+        // Assert
+        var stored = await _context.Bookmarks.FirstOrDefaultAsync(b => b.Name == "New");
+        Assert.That(stored, Is.Not.Null);
+    }
+
+    [Test]
+    public void AddAsync_NullEntity_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.ThrowsAsync<ArgumentNullException>(
+            async () => await _repository.AddAsync(null!));
+    }
+
+    #endregion
+
+    #region Update Tests
+
+    [Test]
+    public async Task Update_TrackedEntity_MarksAsModified()
+    {
+        // Arrange
+        var bookmark = new Bookmark { Name = "Original", Url = "https://original.com" };
         await _context.Bookmarks.AddAsync(bookmark);
         await _context.SaveChangesAsync();
 
-        bookmark.Name = "Updated";
-        bookmark.Url = "https://updated.com";
-
         // Act
-        var result = await _repository.UpdateAsync(bookmark);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value?.Name, Is.EqualTo("Updated"));
-        Assert.That(result.Value.Url, Is.EqualTo("https://updated.com"));
-
-        var updatedBookmark = await _context.Bookmarks.FirstOrDefaultAsync(b => b.Id == bookmark.Id);
-        Assert.That(updatedBookmark?.Name, Is.EqualTo("Updated"));
-    }
-
-    [Test]
-    public async Task FindBookmarkById_WithExistingId_ShouldReturnBookmark()
-    {
-        // Arrange
-        await SeedDatabase();
-        var expectedBookmark = _testBookmarks[0];
-
-        // Act
-        var result = await _repository.FindBookmarkById(expectedBookmark.Id, false);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Not.Null);
-        Assert.That(result.Value.Id, Is.EqualTo(expectedBookmark.Id));
-        Assert.That(result.Value.Name, Is.EqualTo(expectedBookmark.Name));
-    }
-
-    [Test]
-    public async Task FindBookmarkById_WithNonExistingId_ShouldReturnNull()
-    {
-        // Arrange
-        await SeedDatabase();
-
-        // Act
-        var result = await _repository.FindBookmarkById(999, false);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Null);
-    }
-
-    [Test]
-    public async Task FindBookmarkByName_WithExistingName_ShouldReturnBookmark()
-    {
-        // Arrange
-        await SeedDatabase();
-        var expectedBookmark = _testBookmarks[0];
-
-        // Act
-        var result = await _repository.FindBookmarkByName(expectedBookmark.Name, false);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Not.Null);
-        Assert.That(result.Value.Name, Is.EqualTo(expectedBookmark.Name));
-    }
-
-    [Test]
-    public async Task FindBookmarkByName_WithCaseInsensitiveName_ShouldReturnBookmark()
-    {
-        // Arrange
-        await SeedDatabase();
-        var expectedBookmark = _testBookmarks[0];
-
-        // Act
-        var result = await _repository.FindBookmarkByName(expectedBookmark.Name.ToUpper(), false);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Not.Null);
-        Assert.That(result.Value.Name, Is.EqualTo(expectedBookmark.Name));
-    }
-
-    [Test]
-    public async Task FindBookmarkByName_WithNonExistingName_ShouldReturnNull()
-    {
-        // Arrange
-        await SeedDatabase();
-
-        // Act
-        var result = await _repository.FindBookmarkByName("Non Existing", false);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Null);
-    }
-
-    [Test]
-    public async Task FindBookmarkByUrl_WithExistingUrl_ShouldReturnBookmark()
-    {
-        // Arrange
-        await SeedDatabase();
-        var expectedBookmark = _testBookmarks[0];
-
-        // Act
-        var result = await _repository.FindBookmarkByUrl(expectedBookmark.Url, false);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Not.Null);
-        Assert.That(result.Value.Url, Is.EqualTo(expectedBookmark.Url));
-    }
-
-    [Test]
-    public async Task FindBookmarkByUrl_WithCaseInsensitiveUrl_ShouldReturnBookmark()
-    {
-        // Arrange
-        await SeedDatabase();
-        var expectedBookmark = _testBookmarks[0];
-
-        // Act
-        var result = await _repository.FindBookmarkByUrl(expectedBookmark.Url.ToUpper(), false);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Not.Null);
-        Assert.That(result.Value.Url, Is.EqualTo(expectedBookmark.Url));
-    }
-
-    [Test]
-    public async Task FindBookmarkByUrl_WithNonExistingUrl_ShouldReturnNull()
-    {
-        // Arrange
-        await SeedDatabase();
-
-        // Act
-        var result = await _repository.FindBookmarkByUrl("https://nonexisting.com", false);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Null);
-    }
-
-    [Test]
-    public async Task FindBookmarksByCategory_WithExistingCategory_ShouldReturnBookmarks()
-    {
-        // Arrange
-        await SeedDatabase();
-
-        // Act
-        var result = await _repository.FindBookmarksByCategory("Tech", false);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Not.Null);
-        Assert.That(result.Value.Count(), Is.EqualTo(2));
-        Assert.That(result.Value.All(b => b.Category == "Tech"), Is.True);
-    }
-
-    [Test]
-    public async Task FindBookmarksByCategory_WithNonExistingCategory_ShouldReturnEmptyCollection()
-    {
-        // Arrange
-        await SeedDatabase();
-
-        // Act
-        var result = await _repository.FindBookmarksByCategory("NonExisting", false);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Not.Null);
-        Assert.That(result.Value.Count(), Is.EqualTo(0));
-    }
-
-    [Test]
-    public async Task SaveChangesAsync_ShouldReturnNumberOfChanges()
-    {
-        // Arrange
-        var bookmark = new Bookmark { Name = "Test Save", Url = "https://save.com", Category = "Tech" };
-        await _context.Bookmarks.AddAsync(bookmark);
-
-        // Act
-        var result = await _repository.SaveChangesAsync();
-
-        // Assert
-        Assert.That(result, Is.EqualTo(1));
-    }
-
-    [Test]
-    public async Task SaveChangesAsync_WithNoChanges_ShouldReturnZero()
-    {
-        // Arrange
-        await SeedDatabase();
-
-        // Act
-        var result = await _repository.SaveChangesAsync();
-
-        // Assert
-        Assert.That(result, Is.EqualTo(0));
-    }
-
-    [Test]
-    public async Task ConcurrentOperations_ShouldHandleThreadSafety()
-    {
-        // Arrange
-        var tasks = new List<Task<ExecutionResult<Bookmark>>>();
-
-        // Act
-        for (int i = 0; i < 10; i++)
-        {
-            var bookmark = new Bookmark { Name = $"Concurrent {i}", Url = $"https://concurrent{i}.com", Category = "Tech" };
-            tasks.Add(_repository.AddAsync(bookmark));
-        }
-
-        var results = await Task.WhenAll(tasks);
-
-        // Assert
-        Assert.That(results.All(r => r.IsSuccess), Is.True);
-
-        var allBookmarks = await _repository.FindAllAsync(false);
-        Assert.That(allBookmarks.Value?.Count(), Is.EqualTo(10));
-    }
-
-    [Test]
-    public async Task FindBookmarkById_WithTrackingChanges_ShouldReturnTrackedEntity()
-    {
-        // Arrange
-        await SeedDatabase();
-        var expectedBookmark = _testBookmarks[0];
-
-        // Act
-        var result = await _repository.FindBookmarkById(expectedBookmark.Id, true);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Not.Null);
-
-        if (result.Value is not null)
-        {
-            // Verify tracking by checking EntityState
-            var entry = _context.Entry(result.Value);
-            Assert.That(entry.State, Is.EqualTo(EntityState.Unchanged));
-        }
-    }
-
-    [Test]
-    public async Task FindBookmarkById_WithoutTrackingChanges_ShouldReturnUntrackedEntity()
-    {
-        // Arrange
-        await SeedDatabase();
-        var expectedBookmark = _testBookmarks[0];
-
-        // Act
-        var result = await _repository.FindBookmarkById(expectedBookmark.Id, false);
-
-        // Assert
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.Not.Null);
-
-        // Verify no tracking by checking EntityState
-        if (result.Value is not null)
-        {
-            var entry = _context.Entry(result.Value);
-            Assert.That(entry.State, Is.EqualTo(EntityState.Detached));
-        }
-    }
-
-    private async Task SeedDatabase()
-    {
-        await _context.Bookmarks.AddRangeAsync(_testBookmarks);
+        var tracked = await _context.Bookmarks.FindAsync(bookmark.Id);
+        tracked!.Name = "Modified";
+        _repository.Update(tracked);
         await _context.SaveChangesAsync();
+
+        // Assert
+        var updated = await _context.Bookmarks.FindAsync(bookmark.Id);
+        Assert.That(updated!.Name, Is.EqualTo("Modified"));
     }
+
+    [Test]
+    public void Update_NullEntity_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => _repository.Update(null!));
+    }
+
+    #endregion
+
+    #region Delete Tests
+
+    [Test]
+    public async Task Delete_TrackedEntity_RemovesFromContext()
+    {
+        // Arrange
+        var bookmark = new Bookmark { Name = "ToDelete", Url = "https://delete.com" };
+        await _context.Bookmarks.AddAsync(bookmark);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var tracked = await _context.Bookmarks.FindAsync(bookmark.Id);
+        _repository.Delete(tracked!);
+        await _context.SaveChangesAsync();
+
+        // Assert
+        var deleted = await _context.Bookmarks.FindAsync(bookmark.Id);
+        Assert.That(deleted, Is.Null);
+    }
+
+    [Test]
+    public void Delete_NullEntity_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => _repository.Delete(null!));
+    }
+
+    #endregion
+
+    #region GetByNameAsync Tests
+
+    [Test]
+    public async Task GetByNameAsync_NameExists_ReturnsBookmark()
+    {
+        // Arrange
+        var bookmark = new Bookmark { Name = "FindMe", Url = "https://findme.com" };
+        await _context.Bookmarks.AddAsync(bookmark);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetByNameAsync("FindMe");
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Name, Is.EqualTo("FindMe"));
+    }
+
+    [Test]
+    public async Task GetByNameAsync_CaseInsensitive_ReturnsBookmark()
+    {
+        // Arrange
+        var bookmark = new Bookmark { Name = "CaseSensitive", Url = "https://case.com" };
+        await _context.Bookmarks.AddAsync(bookmark);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetByNameAsync("casesensitive");
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Name, Is.EqualTo("CaseSensitive"));
+    }
+
+    [Test]
+    public async Task GetByNameAsync_NameNotExists_ReturnsNull()
+    {
+        // Act
+        var result = await _repository.GetByNameAsync("NonExistent");
+
+        // Assert
+        Assert.That(result, Is.Null);
+    }
+
+    [Test]
+    public void GetByNameAsync_NullName_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.ThrowsAsync<ArgumentNullException>(
+            async () => await _repository.GetByNameAsync(null!));
+    }
+
+    [Test]
+    public void GetByNameAsync_EmptyName_ThrowsArgumentException()
+    {
+        // Act & Assert
+        Assert.ThrowsAsync<ArgumentException>(
+            async () => await _repository.GetByNameAsync(""));
+    }
+
+    [Test]
+    public void GetByNameAsync_WhitespaceName_ThrowsArgumentException()
+    {
+        // Act & Assert
+        Assert.ThrowsAsync<ArgumentException>(
+            async () => await _repository.GetByNameAsync("   "));
+    }
+
+    #endregion
+
+    #region GetByUrlAsync Tests
+
+    [Test]
+    public async Task GetByUrlAsync_UrlExists_ReturnsBookmark()
+    {
+        // Arrange
+        var bookmark = new Bookmark { Name = "UrlTest", Url = "https://urltest.com" };
+        await _context.Bookmarks.AddAsync(bookmark);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetByUrlAsync("https://urltest.com");
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Url, Is.EqualTo("https://urltest.com"));
+    }
+
+    [Test]
+    public async Task GetByUrlAsync_UrlNotExists_ReturnsNull()
+    {
+        // Act
+        var result = await _repository.GetByUrlAsync("https://nonexistent.com");
+
+        // Assert
+        Assert.That(result, Is.Null);
+    }
+
+    [Test]
+    public void GetByUrlAsync_NullUrl_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.ThrowsAsync<ArgumentNullException>(
+            async () => await _repository.GetByUrlAsync(null!));
+    }
+
+    #endregion
+
+    #region GetByCategoryAsync Tests
+
+    [Test]
+    public async Task GetByCategoryAsync_CategoryExists_ReturnsBookmarks()
+    {
+        // Arrange
+        await _context.Bookmarks.AddRangeAsync(
+            new Bookmark { Name = "Tech1", Url = "https://tech1.com", Category = "Tech" },
+            new Bookmark { Name = "Tech2", Url = "https://tech2.com", Category = "Tech" },
+            new Bookmark { Name = "Other", Url = "https://other.com", Category = "Other" }
+        );
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetByCategoryAsync("Tech");
+
+        // Assert
+        Assert.That(result, Has.Count.EqualTo(2));
+        Assert.That(result.All(b => b.Category == "Tech"), Is.True);
+    }
+
+    [Test]
+    public async Task GetByCategoryAsync_CategoryNotExists_ReturnsEmptyList()
+    {
+        // Act
+        var result = await _repository.GetByCategoryAsync("NonExistent");
+
+        // Assert
+        Assert.That(result, Is.Empty);
+    }
+
+    [Test]
+    public async Task GetByCategoryAsync_CaseInsensitive_ReturnsBookmarks()
+    {
+        // Arrange
+        await _context.Bookmarks.AddAsync(
+            new Bookmark { Name = "Tech1", Url = "https://tech1.com", Category = "Technology" }
+        );
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetByCategoryAsync("technology");
+
+        // Assert
+        Assert.That(result, Has.Count.EqualTo(1));
+    }
+
+    #endregion
+
+    #region ExistsByNameAsync Tests
+
+    [Test]
+    public async Task ExistsByNameAsync_NameExists_ReturnsTrue()
+    {
+        // Arrange
+        var bookmark = new Bookmark { Name = "Exists", Url = "https://exists.com" };
+        await _context.Bookmarks.AddAsync(bookmark);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.ExistsByNameAsync("Exists");
+
+        // Assert
+        Assert.That(result, Is.True);
+    }
+
+    [Test]
+    public async Task ExistsByNameAsync_NameNotExists_ReturnsFalse()
+    {
+        // Act
+        var result = await _repository.ExistsByNameAsync("DoesNotExist");
+
+        // Assert
+        Assert.That(result, Is.False);
+    }
+
+    [Test]
+    public async Task ExistsByNameAsync_CaseInsensitive_ReturnsTrue()
+    {
+        // Arrange
+        var bookmark = new Bookmark { Name = "ExistsCaseSensitive", Url = "https://existscase.com" };
+        await _context.Bookmarks.AddAsync(bookmark);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.ExistsByNameAsync("EXISTSCASESENSITIVE");
+
+        // Assert
+        Assert.That(result, Is.True);
+    }
+
+    #endregion
+
+    #region ExistsByUrlAsync Tests
+
+    [Test]
+    public async Task ExistsByUrlAsync_UrlExists_ReturnsTrue()
+    {
+        // Arrange
+        var bookmark = new Bookmark { Name = "UrlExists", Url = "https://urlexists.com" };
+        await _context.Bookmarks.AddAsync(bookmark);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.ExistsByUrlAsync("https://urlexists.com");
+
+        // Assert
+        Assert.That(result, Is.True);
+    }
+
+    [Test]
+    public async Task ExistsByUrlAsync_UrlNotExists_ReturnsFalse()
+    {
+        // Act
+        var result = await _repository.ExistsByUrlAsync("https://doesnotexist.com");
+
+        // Assert
+        Assert.That(result, Is.False);
+    }
+
+    [Test]
+    public async Task ExistsByUrlAsync_CaseInsensitive_ReturnsTrue()
+    {
+        // Arrange
+        var bookmark = new Bookmark { Name = "UrlCase", Url = "https://UrlCaseSensitive.com" };
+        await _context.Bookmarks.AddAsync(bookmark);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.ExistsByUrlAsync("https://urlcasesensitive.com");
+
+        // Assert
+        Assert.That(result, Is.True);
+    }
+
+    #endregion
 }

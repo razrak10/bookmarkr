@@ -1,60 +1,58 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace bookmarkr.Persistence
+namespace bookmarkr.Persistence;
+
+/// <summary>
+/// Configures the entity mapping for <see cref="Bookmark"/> entities.
+/// </summary>
+/// <remarks>
+/// This configuration defines the database schema for the Bookmarks table,
+/// including column mappings, constraints, and indexes. String comparisons
+/// use SQLite's NOCASE collation for case-insensitive matching.
+/// </remarks>
+internal sealed class BookmarkConfiguration : IEntityTypeConfiguration<Bookmark>
 {
-    internal class BookmarkConfiguration : IEntityTypeConfiguration<Bookmark>
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Bookmark> builder)
     {
-        public void Configure(EntityTypeBuilder<Bookmark> builder)
-        {
-            builder.ToTable("Bookmarks");
+        builder.ToTable("Bookmarks");
 
-            builder.HasKey(b => b.Id);
+        builder.HasKey(b => b.Id);
 
-            builder.Property(b => b.Id)
-                .HasColumnName("BookmarkId")
-                .IsRequired();
+        builder.Property(b => b.Id)
+            .HasColumnName("BookmarkId")
+            .IsRequired();
 
-            builder.Property(b => b.Name)
-                .HasColumnName("Name")
-                .IsRequired()
-                .HasMaxLength(255);
+        builder.Property(b => b.Name)
+            .HasColumnName("Name")
+            .IsRequired()
+            .HasMaxLength(255)
+            .UseCollation("NOCASE");
 
-            builder.Property(b => b.Url)
-                .HasColumnName("URL")
-                .IsRequired()
-                .HasMaxLength(2048);
+        builder.Property(b => b.Url)
+            .HasColumnName("URL")
+            .IsRequired()
+            .HasMaxLength(2048)
+            .UseCollation("NOCASE");
 
-            builder.Property(b => b.Category)
-                .HasColumnName("Category")
-                .HasMaxLength(100);
+        builder.Property(b => b.Category)
+            .HasColumnName("Category")
+            .HasMaxLength(100)
+            .UseCollation("NOCASE");
 
-            builder.Property(b => b.CreatedAt)
-                .HasDefaultValueSql("datetime('now')");
+        builder.Property(b => b.CreatedAt)
+            .HasDefaultValueSql("datetime('now')");
 
-            builder.Property(b => b.UpdatedAt)
-                .HasDefaultValueSql("datetime('now')");
+        builder.Property(b => b.UpdatedAt)
+            .HasDefaultValueSql("datetime('now')");
 
-            // Add unique constraints
-            builder.HasIndex(b => b.Name)
-                .IsUnique()
-                .HasDatabaseName("IX_Bookmarks_Name_Unique");
+        builder.HasIndex(b => b.Name)
+            .IsUnique()
+            .HasDatabaseName("IX_Bookmarks_Name_Unique");
 
-            builder.HasIndex(b => b.Url)
-                .IsUnique()
-                .HasDatabaseName("IX_Bookmarks_Url_Unique");
-
-            // Seed initial data with static DateTime values
-            var staticDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
-            // Seed initial data
-            builder.HasData(
-                new Bookmark { Id = 1, Name = "First", Category = "Cars", Url = "https://www.lol.com", CreatedAt = staticDate, UpdatedAt = staticDate },
-                new Bookmark { Id = 2, Name = "Second", Category = "Tech", Url = "https://www.second.com", CreatedAt = staticDate, UpdatedAt = staticDate },
-                new Bookmark { Id = 3, Name = "Third", Category = "Tech", Url = "https://www.third.com", CreatedAt = staticDate, UpdatedAt = staticDate },
-                new Bookmark {Id = 4, Name = "Fourth", Category = "Cooking", Url = "https://www.cooking.com", CreatedAt = staticDate, UpdatedAt = staticDate },
-                new Bookmark {Id = 5, Name = "Fifth", Category = "SocialMedia", Url = "https://www.social.com", CreatedAt = staticDate, UpdatedAt = staticDate }
-            );
-        }
+        builder.HasIndex(b => b.Url)
+            .IsUnique()
+            .HasDatabaseName("IX_Bookmarks_Url_Unique");
     }
 }

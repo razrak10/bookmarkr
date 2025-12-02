@@ -27,7 +27,8 @@ namespace bookmarkr.Migrations
                     b.Property<string>("Category")
                         .HasMaxLength(100)
                         .HasColumnType("TEXT")
-                        .HasColumnName("Category");
+                        .HasColumnName("Category")
+                        .UseCollation("NOCASE");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -38,7 +39,8 @@ namespace bookmarkr.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("TEXT")
-                        .HasColumnName("Name");
+                        .HasColumnName("Name")
+                        .UseCollation("NOCASE");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
@@ -49,7 +51,8 @@ namespace bookmarkr.Migrations
                         .IsRequired()
                         .HasMaxLength(2048)
                         .HasColumnType("TEXT")
-                        .HasColumnName("URL");
+                        .HasColumnName("URL")
+                        .UseCollation("NOCASE");
 
                     b.HasKey("Id");
 
@@ -62,53 +65,6 @@ namespace bookmarkr.Migrations
                         .HasDatabaseName("IX_Bookmarks_Url_Unique");
 
                     b.ToTable("Bookmarks", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Category = "Cars",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Name = "First",
-                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Url = "https://www.lol.com"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Category = "Tech",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Name = "Second",
-                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Url = "https://www.second.com"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Category = "Tech",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Name = "Third",
-                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Url = "https://www.third.com"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Category = "Cooking",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Name = "Fourth",
-                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Url = "https://www.cooking.com"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Category = "SocialMedia",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Name = "Fifth",
-                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Url = "https://www.social.com"
-                        });
                 });
 #pragma warning restore 612, 618
         }

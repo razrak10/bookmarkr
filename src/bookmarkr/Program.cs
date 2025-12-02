@@ -12,6 +12,7 @@ using bookmarkr.Commands.Link.Update;
 using bookmarkr.Commands.Show;
 using bookmarkr.Commands.Sync;
 using bookmarkr.Persistence;
+using bookmarkr.Persistence.Extensions;
 using bookmarkr.Service;
 using bookmarkr.ServiceAgent;
 using Microsoft.EntityFrameworkCore;
@@ -41,10 +42,8 @@ class Program
         IHost host = Host.CreateDefaultBuilder(args)
              .ConfigureServices((hostcontext, services) =>
              {
-                 // Add Entity Framework
-                 services.AddDbContext<BookmarkrDbContext>(options => options.UseSqlite("Data Source=bookmarks.db"));
-
-                 services.AddScoped<IBookmarkRepository, BookmarkRepository>();
+                 // Add Persistence services (DbContext, UnitOfWork, Repositories)
+                 services.AddPersistenceServices("Data Source=bookmarks.db");
 
                  // Register BookmarkService
                  services.AddScoped<IBookmarkService, BookmarkService>();
@@ -81,6 +80,7 @@ class Program
         _host = host;
 
         await EnsureDatabaseAsync();
+        await _host.Services.SeedDatabaseAsync();
 
         RootCommand rootCommand = new RootCommand("Bookmarkr is a bookmark manager provided as a CLI application");
 
@@ -189,10 +189,10 @@ class Program
 
     private static void FreeSerilogLoggerOnShutdown()
     {
-        // This even is raised when the process is about to exit
+        // This event is raised when the process is about to exit
         // allowing you to perform cleanup tasks or save data
         AppDomain.CurrentDomain.ProcessExit += (s, e) => ExecuteShutdownTasks();
-        // This even is triggered when the user pressed Ctrl+C or
+        // This event is triggered when the user pressed Ctrl+C or
         // Ctrl+Break. Doesn't cover all scenarios but useful for
         // user initiated terminations
         Console.CancelKeyPress += (s, e) => ExecuteShutdownTasks();

@@ -289,3 +289,9 @@ __pycache__/
 *.xsd.cs
 *.db
 /BenchmarkDotNet.Artifacts/results
+.github/*
+src/bookmarkr/logs/*
+src/bookmarkr/Migrations/*
+src/bookmarkr/bookmarks.db*
+docs/*
+plan/*
