@@ -139,59 +139,55 @@ public class InteractiveCommandHandler
         // Add bookmarks for the Tech category
         ExecutionResult.ExecutionResult<IEnumerable<Bookmark>> techResult = await _bookmarkService.GetBookmarksByCategory("Tech");
 
-        if (!techResult.IsSuccess)
+        if (techResult.IsSuccess && techResult.Value != null)
         {
-            string message = $"Error occured while retrieving categoy 'Tech'. Error: {techResult.Message}";
-            LogManager.LogError(message, techResult.Exception);
-            MessageHelper.ShowErrorMessage([message]);
-            return;
+            foreach (Bookmark techBookmark in techResult.Value)
+            {
+                techBooksCategory.AddNode($"{techBookmark.Name} | {techBookmark.Url}");
+            }
         }
-        IEnumerable<Bookmark>? techBooks = techResult.Value;
-        foreach (Bookmark techBookmark in techBooks!)
+        else
         {
-            techBooksCategory.AddNode($"{techBookmark.Name} | {techBookmark.Url}");
+            techBooksCategory.AddNode("[grey](no bookmarks)[/]");
         }
 
         ExecutionResult.ExecutionResult<IEnumerable<Bookmark>> carsResult = await _bookmarkService.GetBookmarksByCategory("Cars");
-        if (!carsResult.IsSuccess)
+        if (carsResult.IsSuccess && carsResult.Value != null)
         {
-            string message = $"Error occured while retrieving categoy 'Cars'. Error: {carsResult.Message}";
-            LogManager.LogError(message, carsResult.Exception);
-            MessageHelper.ShowErrorMessage([message]);
-            return;
+            foreach (Bookmark carBook in carsResult.Value)
+            {
+                carsCategory.AddNode($"{carBook.Name} | {carBook.Url}");
+            }
         }
-        IEnumerable<Bookmark>? carsBooks = carsResult.Value;
-        foreach (Bookmark carBook in carsBooks!)
+        else
         {
-            carsCategory.AddNode($"{carBook.Name} | {carBook.Url}");
+            carsCategory.AddNode("[grey](no bookmarks)[/]");
         }
 
         ExecutionResult.ExecutionResult<IEnumerable<Bookmark>> socialResult = await _bookmarkService.GetBookmarksByCategory("SocialMedia");
-        if (!socialResult.IsSuccess)
+        if (socialResult.IsSuccess && socialResult.Value != null)
         {
-            string message = $"Error occured while retrieving categoy 'SocialMedia'. Error: {socialResult.Message}";
-            LogManager.LogError(message, socialResult.Exception);
-            MessageHelper.ShowErrorMessage([message]);
-            return;
+            foreach (Bookmark socialMediaBook in socialResult.Value)
+            {
+                socialMediaCategory.AddNode($"{socialMediaBook.Name} | {socialMediaBook.Url}");
+            }
         }
-        IEnumerable<Bookmark>? socialBooks = socialResult.Value;
-        foreach (Bookmark socialMediaBook in socialBooks!)
+        else
         {
-            socialMediaCategory.AddNode($"{socialMediaBook.Name} | {socialMediaBook.Url}");
+            socialMediaCategory.AddNode("[grey](no bookmarks)[/]");
         }
 
         ExecutionResult.ExecutionResult<IEnumerable<Bookmark>> cookResult = await _bookmarkService.GetBookmarksByCategory("Cooking");
-        if (!cookResult.IsSuccess)
+        if (cookResult.IsSuccess && cookResult.Value != null)
         {
-            string message = $"Error occured while retrieving categoy 'Cooking'. Error: {cookResult.Message}";
-            LogManager.LogError(message, cookResult.Exception);
-            MessageHelper.ShowErrorMessage([message]);
-            return;
+            foreach (Bookmark cookingBook in cookResult.Value)
+            {
+                cookingCategory.AddNode($"{cookingBook.Name} | {cookingBook.Url}");
+            }
         }
-        IEnumerable<Bookmark>? cookBooks = cookResult.Value;
-        foreach (Bookmark cookingBook in cookBooks!)
+        else
         {
-            cookingCategory.AddNode($"{cookingBook.Name} | {cookingBook.Url}");
+            cookingCategory.AddNode("[grey](no bookmarks)[/]");
         }
 
         // Render the tree

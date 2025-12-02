@@ -2,6 +2,9 @@
 using bookmarkr.Commands;
 using bookmarkr.Commands.Export;
 using bookmarkr.Persistence;
+using bookmarkr.Persistence.Abstractions;
+using bookmarkr.Persistence.Extensions;
+using bookmarkr.Persistence.UnitOfWork;
 using bookmarkr.Service;
 using bookmarkr.ServiceAgent;
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +38,8 @@ namespace bookmarkr.Benchmarks
                 options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString());
             });
 
-            services.AddScoped<IBookmarkRepository, BookmarkRepository>();
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<IBookmarkRepository, Persistence.Repositories.BookmarkRepository>();
 
             services.AddSingleton(Mock.Of<IBookmarkrLookupServiceAgent>());
             services.AddScoped<IBookmarkService, BookmarkService>();
@@ -75,12 +79,13 @@ namespace bookmarkr.Benchmarks
 
             // Add bookmarks to the database
             using var scope = _serviceProvider.CreateScope();
-            var repository = scope.ServiceProvider.GetRequiredService<IBookmarkRepository>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
             foreach (var bookmark in _testBookmarks)
             {
-                await repository.AddAsync(bookmark);
+                await unitOfWork.Bookmarks.AddAsync(bookmark);
             }
+            await unitOfWork.SaveChangesAsync();
         }
 
         #endregion
